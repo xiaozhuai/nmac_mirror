@@ -1,10 +1,7 @@
 package main
 
 import (
-	"fmt"
-	"github.com/kataras/golog"
 	"github.com/kataras/iris/v12"
-	"io/ioutil"
 )
 
 func List(ctx iris.Context, ns NMacService) {
@@ -54,35 +51,7 @@ func Detail(ctx iris.Context, ns NMacService) {
 	})
 }
 
-func escapeUrl(s string) (result string) {
-	for _, c := range s {
-		if c <= 0x7f { // single byte
-			result += fmt.Sprintf("%X", c)
-		} else if c > 0x1fffff { // quaternary byte
-			result += fmt.Sprintf("%X%X%X%X",
-				0xf0+((c&0x1c0000)>>18),
-				0x80+((c&0x3f000)>>12),
-				0x80+((c&0xfc0)>>6),
-				0x80+(c&0x3f),
-			)
-		} else if c > 0x7ff { // triple byte
-			result += fmt.Sprintf("%X%X%X",
-				0xe0+((c&0xf000)>>12),
-				0x80+((c&0xfc0)>>6),
-				0x80+(c&0x3f),
-			)
-		} else { // double byte
-			result += fmt.Sprintf("%X%X",
-				0xc0+((c&0x7c0)>>6),
-				0x80+(c&0x3f),
-			)
-		}
-	}
-
-	return result
-}
-
-func DirectUrl(ctx iris.Context, ns NMacService, cache CacheService, logger *golog.Logger) {
+func DirectUrl(ctx iris.Context, ns NMacService, cache CacheService) {
 	u := ctx.URLParamDefault("url", "")
 	if u == "" {
 		ctx.JSON(iris.Map{
@@ -138,7 +107,7 @@ func PreviousVersion(ctx iris.Context, ns NMacService) {
 	})
 }
 
-func FetchImage(ctx iris.Context, ns NMacService, cache CacheService, logger *golog.Logger) {
+func FetchImage(ctx iris.Context, ns NMacService, cache CacheService) {
 	u := ctx.URLParamDefault("url", "")
 	if u == "" {
 		ctx.JSON(iris.Map{
@@ -156,8 +125,7 @@ func FetchImage(ctx iris.Context, ns NMacService, cache CacheService, logger *go
 		return
 	}
 
-	client := ns.GetHttpClient()
-	r, err := client.Get(u)
+	contentType, data, err := ns.FetchImage(u)
 	if err != nil {
 		ctx.JSON(iris.Map{
 			"code":    1,
@@ -167,22 +135,8 @@ func FetchImage(ctx iris.Context, ns NMacService, cache CacheService, logger *go
 		return
 	}
 
-	data, err = ioutil.ReadAll(r.Body)
-	if err != nil {
-		ctx.JSON(iris.Map{
-			"code":    1,
-			"message": `Read image data failed!`,
-			"data":    nil,
-		})
-		return
-	}
-
-	contentType = r.Header.Get("Content-Type")
-
 	cache.SetImageCache(u, contentType, data)
 
 	ctx.ContentType(contentType)
 	ctx.Write(data)
 }
-
-// TODO 默认user-agent

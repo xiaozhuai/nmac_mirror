@@ -6,6 +6,8 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/hero"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -41,30 +43,32 @@ type PreviousVersionInfo struct {
 }
 
 type NMacService interface {
-	GetHttpClient() http.Client
 	GetList(category string, page int) ([]*ItemShortInfo, error)
 	GetDetail(detailPageUrl string) (*ItemDetailInfo, error)
 	GetDirectUrl(u string) (string, error)
 	GetPreviousVersion(previousPageUrl string) []*PreviousVersionInfo
+	FetchImage(u string) (contentType string, data []byte, err error)
 }
 
 type _NMacServiceImpl struct {
-	proxy     string
+	proxy     *url.URL
 	userAgent string
 }
 
-func (_this *_NMacServiceImpl) GetHttpClient() http.Client {
+func (_this *_NMacServiceImpl) request(method string, u string, body io.Reader) (*http.Response, error) {
 	transport := http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
-	if _this.proxy != "" {
-		proxyUrl, _ := url.Parse(_this.proxy)
-		transport.Proxy = http.ProxyURL(proxyUrl)
+	if _this.proxy != nil {
+		transport.Proxy = http.ProxyURL(_this.proxy)
 	}
-	return http.Client{
+	client := http.Client{
 		Transport: &transport,
 		Timeout:   30 * time.Second,
 	}
+	req, _ := http.NewRequest("GET", u, body)
+	req.Header.Set("User-Agent", _this.userAgent)
+	return client.Do(req)
 }
 
 func (_this *_NMacServiceImpl) parseContent(theContent *goquery.Selection) (html string, version string, size string, previousPageUrl string, urls []*DownloadUrl) {
@@ -133,7 +137,6 @@ func (_this *_NMacServiceImpl) parseContent(theContent *goquery.Selection) (html
 }
 
 func (_this *_NMacServiceImpl) GetList(category string, page int) ([]*ItemShortInfo, error) {
-	client := _this.GetHttpClient()
 	u := "https://nmac.to/"
 	if category != "" {
 		u += fmt.Sprintf("category/%s/", category)
@@ -142,7 +145,8 @@ func (_this *_NMacServiceImpl) GetList(category string, page int) ([]*ItemShortI
 		u += fmt.Sprintf("page/%d/", page)
 	}
 
-	r, err := client.Get(u)
+	r, err := _this.request("GET", u, nil)
+
 	if err != nil {
 		return nil, err
 	}
@@ -170,8 +174,7 @@ func (_this *_NMacServiceImpl) GetList(category string, page int) ([]*ItemShortI
 }
 
 func (_this *_NMacServiceImpl) GetDetail(detailPageUrl string) (*ItemDetailInfo, error) {
-	client := _this.GetHttpClient()
-	r, err := client.Get(detailPageUrl)
+	r, err := _this.request("GET", detailPageUrl, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -209,8 +212,7 @@ func (_this *_NMacServiceImpl) GetDetail(detailPageUrl string) (*ItemDetailInfo,
 }
 
 func (_this *_NMacServiceImpl) GetDirectUrl(u string) (string, error) {
-	client := _this.GetHttpClient()
-	r, err := client.Get(u)
+	r, err := _this.request("GET", u, nil)
 	if err != nil {
 		return "", err
 	}
@@ -223,8 +225,7 @@ func (_this *_NMacServiceImpl) GetDirectUrl(u string) (string, error) {
 
 func (_this *_NMacServiceImpl) GetPreviousVersion(previousPageUrl string) []*PreviousVersionInfo {
 	versions := make([]*PreviousVersionInfo, 0)
-	client := _this.GetHttpClient()
-	r, err := client.Get(previousPageUrl)
+	r, err := _this.request("GET", previousPageUrl, nil)
 	if err != nil {
 		return versions
 	}
@@ -238,6 +239,7 @@ func (_this *_NMacServiceImpl) GetPreviousVersion(previousPageUrl string) []*Pre
 		version = strings.ReplaceAll(version, "Version", "")
 		version = strings.ReplaceAll(version, "version", "")
 		version = strings.ReplaceAll(version, ":", "")
+		version = strings.TrimSpace(version)
 		urls := make([]*DownloadUrl, 0)
 
 		selection.Find(".accordion-inner a.btn-block").Each(func(j int, selection2 *goquery.Selection) {
@@ -256,11 +258,37 @@ func (_this *_NMacServiceImpl) GetPreviousVersion(previousPageUrl string) []*Pre
 	return versions
 }
 
-// TODO user-agent
+func (_this *_NMacServiceImpl) FetchImage(u string) (contentType string, data []byte, err error) {
+	r, err := _this.request("GET", u, nil)
+	if err != nil {
+		return "", nil, err
+	}
+
+	data, err = ioutil.ReadAll(r.Body)
+	if err != nil {
+		return "", nil, err
+	}
+
+	contentType = r.Header.Get("Content-Type")
+	return contentType, data, nil
+}
+
 func RegisterNMacService(proxy string, userAgent string) {
-	service := &_NMacServiceImpl{
-		proxy:     proxy,
-		userAgent: userAgent,
+	var service NMacService
+	if proxy != "" {
+		proxyUrl, err := url.Parse(proxy)
+		if err != nil {
+			panic(err)
+		}
+		service = &_NMacServiceImpl{
+			proxy:     proxyUrl,
+			userAgent: userAgent,
+		}
+	} else {
+		service = &_NMacServiceImpl{
+			proxy:     nil,
+			userAgent: userAgent,
+		}
 	}
 	hero.Register(func(ctx iris.Context) NMacService {
 		return service
