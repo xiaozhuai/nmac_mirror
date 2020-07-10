@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/hero"
 	"github.com/prologic/bitcask"
 	"io/ioutil"
@@ -52,7 +51,8 @@ func (_this *_CacheServiceImpl) fileExists(file string) bool {
 }
 
 func (_this *_CacheServiceImpl) newImageCacheFile() string {
-	return time.Now().Format("1970_01_01__") + _this.randString(32)
+	t := time.Now()
+	return fmt.Sprintf("%04d_%02d_%02d__%s", t.Year(), t.Month(), t.Day(), _this.randString(32))
 }
 
 func (_this *_CacheServiceImpl) GetDirectUrl(url string) (string, bool) {
@@ -144,9 +144,7 @@ func RegisterCacheService(maxDataSize int, cacheDbDir string, imageCacheDir stri
 		imageCacheDir: imageCacheDir,
 	}
 
-	hero.Register(func(ctx iris.Context) CacheService {
-		return cache
-	})
+	hero.Register(cache)
 
 	return cache
 }

@@ -4,7 +4,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
-	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/hero"
 	"io"
 	"io/ioutil"
@@ -290,7 +289,5 @@ func RegisterNMacService(proxy string, userAgent string) {
 			userAgent: userAgent,
 		}
 	}
-	hero.Register(func(ctx iris.Context) NMacService {
-		return service
-	})
+	hero.Register(service)
 }

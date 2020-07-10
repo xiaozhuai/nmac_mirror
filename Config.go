@@ -2,7 +2,9 @@ package main
 
 import (
 	"gopkg.in/yaml.v3"
+	"io"
 	"io/ioutil"
+	"os"
 )
 
 type Configuration struct {
@@ -35,4 +37,21 @@ func LoadConfig(file string) *Configuration {
 		panic(err)
 	}
 	return &configuration
+}
+
+func (_this *Configuration) GetLogFile() io.WriteCloser {
+	if _this.Log == "stdout" {
+		return os.Stdout
+	} else {
+		logFile, err := os.Open(_this.Log)
+		if err != nil {
+			panic(err)
+		}
+		return logFile
+	}
+}
+
+func (_this *Configuration) PrepareDirs() {
+	_ = os.MkdirAll(_this.CacheDbDir, 0777)
+	_ = os.MkdirAll(_this.CacheImageDir, 0777)
 }

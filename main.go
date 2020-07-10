@@ -1,12 +1,10 @@
 package main
 
 import (
-	"github.com/kataras/golog"
 	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/hero"
 	"github.com/kataras/iris/v12/middleware/logger"
 	"github.com/kataras/iris/v12/middleware/recover"
-	"os"
 )
 
 func main() {
@@ -14,30 +12,31 @@ func main() {
 
 	app := iris.New()
 
-	if configuration.Log == "stdout" {
-		app.Logger().SetOutput(os.Stdout)
-	} else {
-		logFile, err := os.Open(configuration.Log)
-		if err != nil {
-			panic(err)
-		}
-		app.Logger().SetOutput(logFile)
-	}
+	logOutput := configuration.GetLogFile()
+	defer logOutput.Close()
+	app.Logger().SetOutput(logOutput)
 	app.Logger().SetLevel(configuration.LogLevel)
 
 	app.Use(recover.New())
 	app.Use(logger.New())
 
-	hero.Register(func(ctx iris.Context) *golog.Logger {
-		return app.Logger()
-	})
+	hero.Register(app.Logger())
 
-	_ = os.MkdirAll(configuration.CacheDbDir, 0777)
-	_ = os.MkdirAll(configuration.CacheImageDir, 0777)
+	configuration.PrepareDirs()
 	cache := RegisterCacheService(configuration.MaxCacheDbSize, configuration.CacheDbDir, configuration.CacheImageDir)
 	defer cache.Close()
 
 	RegisterNMacService(configuration.Proxy, configuration.UserAgent)
+
+	app.HandleDir("/", "./public", iris.DirOptions{
+		Asset:      GzipAsset,
+		AssetInfo:  GzipAssetInfo,
+		AssetNames: GzipAssetNames,
+		AssetValidator: func(ctx iris.Context, name string) bool {
+			ctx.Header("Content-Encoding", "gzip")
+			return true
+		},
+	})
 
 	app.Handle("GET", "/list", hero.Handler(List))
 	app.Handle("GET", "/detail", hero.Handler(Detail))

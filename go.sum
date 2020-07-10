@@ -88,6 +88,8 @@ github.com/jonboulle/clockwork v0.1.0/go.mod h1:Ii8DK3G1RaLaWxj9trq07+26W01tbo22
 github.com/json-iterator/go v1.1.9 h1:9yzud/Ht36ygwatGx56VwCZtlI/2AD15T1X2sjSuGns=
 github.com/json-iterator/go v1.1.9/go.mod h1:KdQUCv79m/52Kvf8AW2vK1V8akMuk1QjK/uOdHXbAo4=
 github.com/julienschmidt/httprouter v1.2.0/go.mod h1:SYymIcj16QtmaHHD7aYtjjsJG7VTCxuUUipMqKk8s4w=
+github.com/kataras/bindata v0.0.1 h1:/kaE+KL8+srNH43lzSB2bdMTNwUTTJ2QswajDlzZF9Y=
+github.com/kataras/bindata v0.0.1/go.mod h1:FmniI9cTSPPQ4qiMgUPrJX0U4IWYIuSYFeFIQHwYIoA=
 github.com/kataras/golog v0.0.10/go.mod h1:yJ8YKCmyL+nWjERB90Qwn+bdyBZsaQwU3bTVFgkFIp8=
 github.com/kataras/golog v0.0.18 h1:Td7hcKN25yzqB/0SO5iohOsMk5Mq5V9kDtM5apaJLY0=
 github.com/kataras/golog v0.0.18/go.mod h1:jRYl7dFYqP8aQj9VkwdBUXYZSfUktm+YYg1arJILfyw=
