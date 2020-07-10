@@ -33,6 +33,7 @@ func main() {
 		AssetInfo:  GzipAssetInfo,
 		AssetNames: GzipAssetNames,
 		AssetValidator: func(ctx iris.Context, name string) bool {
+			ctx.Header("Vary", "Accept-Encoding")
 			ctx.Header("Content-Encoding", "gzip")
 			return true
 		},
