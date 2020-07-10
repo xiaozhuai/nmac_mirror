@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"github.com/kataras/golog"
 	"github.com/kataras/iris/v12"
 	"io/ioutil"
 )
@@ -52,7 +54,35 @@ func Detail(ctx iris.Context, ns NMacService) {
 	})
 }
 
-func DirectUrl(ctx iris.Context, ns NMacService) {
+func escapeUrl(s string) (result string) {
+	for _, c := range s {
+		if c <= 0x7f { // single byte
+			result += fmt.Sprintf("%X", c)
+		} else if c > 0x1fffff { // quaternary byte
+			result += fmt.Sprintf("%X%X%X%X",
+				0xf0+((c&0x1c0000)>>18),
+				0x80+((c&0x3f000)>>12),
+				0x80+((c&0xfc0)>>6),
+				0x80+(c&0x3f),
+			)
+		} else if c > 0x7ff { // triple byte
+			result += fmt.Sprintf("%X%X%X",
+				0xe0+((c&0xf000)>>12),
+				0x80+((c&0xfc0)>>6),
+				0x80+(c&0x3f),
+			)
+		} else { // double byte
+			result += fmt.Sprintf("%X%X",
+				0xc0+((c&0x7c0)>>6),
+				0x80+(c&0x3f),
+			)
+		}
+	}
+
+	return result
+}
+
+func DirectUrl(ctx iris.Context, ns NMacService, cache CacheService, logger *golog.Logger) {
 	u := ctx.URLParamDefault("url", "")
 	if u == "" {
 		ctx.JSON(iris.Map{
@@ -63,8 +93,18 @@ func DirectUrl(ctx iris.Context, ns NMacService) {
 		return
 	}
 
+	directUrl, exists := cache.GetDirectUrl(u)
+	if exists {
+		ctx.JSON(iris.Map{
+			"code":    0,
+			"message": "ok",
+			"data":    directUrl,
+		})
+		return
+	}
+
 	directUrl, err := ns.GetDirectUrl(u)
-	// TODO 缓存direct url
+	cache.SetDirectUrl(u, directUrl)
 
 	code := 0
 	msg := "ok"
@@ -98,7 +138,7 @@ func PreviousVersion(ctx iris.Context, ns NMacService) {
 	})
 }
 
-func FetchImage(ctx iris.Context, ns NMacService) {
+func FetchImage(ctx iris.Context, ns NMacService, cache CacheService, logger *golog.Logger) {
 	u := ctx.URLParamDefault("url", "")
 	if u == "" {
 		ctx.JSON(iris.Map{
@@ -106,6 +146,13 @@ func FetchImage(ctx iris.Context, ns NMacService) {
 			"message": `Query param "url" cannot be empty!`,
 			"data":    nil,
 		})
+		return
+	}
+
+	contentType, data, exists := cache.GetImageCache(u)
+	if exists {
+		ctx.ContentType(contentType)
+		ctx.Write(data)
 		return
 	}
 
@@ -120,7 +167,7 @@ func FetchImage(ctx iris.Context, ns NMacService) {
 		return
 	}
 
-	data, err := ioutil.ReadAll(r.Body)
+	data, err = ioutil.ReadAll(r.Body)
 	if err != nil {
 		ctx.JSON(iris.Map{
 			"code":    1,
@@ -130,9 +177,11 @@ func FetchImage(ctx iris.Context, ns NMacService) {
 		return
 	}
 
-	// TODO 缓存图片
+	contentType = r.Header.Get("Content-Type")
 
-	ctx.ContentType(r.Header.Get("Content-Type"))
+	cache.SetImageCache(u, contentType, data)
+
+	ctx.ContentType(contentType)
 	ctx.Write(data)
 }
 

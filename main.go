@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"github.com/kataras/golog"
 	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/hero"
 	"github.com/kataras/iris/v12/middleware/logger"
@@ -10,18 +10,34 @@ import (
 )
 
 func main() {
+	configuration := LoadConfig("config.yaml")
+
 	app := iris.New()
 
-	app.Logger().SetOutput(os.Stdout)
-	app.Logger().SetLevel("info")
+	if configuration.Log == "stdout" {
+		app.Logger().SetOutput(os.Stdout)
+	} else {
+		logFile, err := os.Open(configuration.Log)
+		if err != nil {
+			panic(err)
+		}
+		app.Logger().SetOutput(logFile)
+	}
+	app.Logger().SetLevel(configuration.LogLevel)
 
 	app.Use(recover.New())
 	app.Use(logger.New())
 
-	RegisterNMacService(
-		"http://127.0.0.1:8118",
-		"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36",
-	)
+	hero.Register(func(ctx iris.Context) *golog.Logger {
+		return app.Logger()
+	})
+
+	_ = os.MkdirAll(configuration.CacheDbDir, 0777)
+	_ = os.MkdirAll(configuration.CacheImageDir, 0777)
+	cache := RegisterCacheService(configuration.MaxCacheDbSize, configuration.CacheDbDir, configuration.CacheImageDir)
+	defer cache.Close()
+
+	RegisterNMacService(configuration.Proxy, configuration.UserAgent)
 
 	app.Handle("GET", "/list", hero.Handler(List))
 	app.Handle("GET", "/detail", hero.Handler(Detail))
@@ -31,6 +47,6 @@ func main() {
 
 	err := app.Run(iris.Addr(":8080"), iris.WithoutServerError(iris.ErrServerClosed))
 	if err != nil {
-		fmt.Printf("Error: %s\n", err.Error())
+		panic(err)
 	}
 }

@@ -141,7 +141,6 @@ func (_this *_NMacServiceImpl) GetList(category string, page int) ([]*ItemShortI
 	if page > 1 {
 		u += fmt.Sprintf("page/%d/", page)
 	}
-	//fmt.Printf("url %s\n", u)
 
 	r, err := client.Get(u)
 	if err != nil {
@@ -195,7 +194,6 @@ func (_this *_NMacServiceImpl) GetDetail(detailPageUrl string) (*ItemDetailInfo,
 	if strings.HasPrefix(previousPageUrl, "/") {
 		previousPageUrl = "https://nmac.to" + previousPageUrl
 	}
-	fmt.Printf("previousPageUrl: %s\n", previousPageUrl)
 
 	detail := &ItemDetailInfo{
 		Title:           title,
@@ -258,6 +256,7 @@ func (_this *_NMacServiceImpl) GetPreviousVersion(previousPageUrl string) []*Pre
 	return versions
 }
 
+// TODO user-agent
 func RegisterNMacService(proxy string, userAgent string) {
 	service := &_NMacServiceImpl{
 		proxy:     proxy,
