@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
-cd frontend
+cd frontend || exit
 yarn
 yarn build
-cd ../backend
+cd ../backend || exit
 bindata ./public/...
 
 echo "Build nmac_mirror_darwin_amd64 ..."
@@ -38,7 +38,7 @@ cp -f ./build/nmac_mirror_win_amd64.exe ./zip/
 cp -f ./build/nmac_mirror_freebsd_amd64 ./zip/
 cp -f config.yaml ./zip/
 
-cd zip
+cd zip || exit
 zip nmac_mirror_darwin_amd64.zip config.yaml nmac_mirror_darwin_amd64
 zip nmac_mirror_linux_amd64.zip config.yaml nmac_mirror_linux_amd64
 zip nmac_mirror_linux_arm.zip config.yaml nmac_mirror_linux_arm
@@ -46,3 +46,12 @@ zip nmac_mirror_linux_arm64.zip config.yaml nmac_mirror_linux_arm64
 zip nmac_mirror_win_386.zip config.yaml nmac_mirror_win_386.exe
 zip nmac_mirror_win_amd64.zip config.yaml nmac_mirror_win_amd64.exe
 zip nmac_mirror_freebsd_amd64.zip config.yaml nmac_mirror_freebsd_amd64
+
+rm -f nmac_mirror_darwin_amd64
+rm -f nmac_mirror_linux_amd64
+rm -f nmac_mirror_linux_arm
+rm -f nmac_mirror_linux_arm64
+rm -f nmac_mirror_win_386.exe
+rm -f nmac_mirror_win_amd64.exe
+rm -f nmac_mirror_freebsd_amd64
+rm -f config.yaml
