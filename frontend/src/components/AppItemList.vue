@@ -1,6 +1,6 @@
 <template>
     <div class="app-item-list">
-        <div class="list-container">
+        <div class="list-container" v-if="list.length > 0">
             <app-item
                     v-for="(item, index) of list"
                     :key="index"
@@ -8,13 +8,13 @@
                     :use-image-cache="use_image_cache"
                     @show-detail="onShowDetail"/>
             <el-pagination
-                    v-if="list.length > 0"
                     background
                     layout="prev, pager, next, ->, jumper"
                     :current-page="page"
                     :page-count="max_page"
                     @current-change="onPageChange"/>
         </div>
+        <div v-else class="nothing">{{isSearchMode ? 'Nothing Found' : 'Nothing Here'}}</div>
         <detail-dialog ref="detailDialog"/>
     </div>
 </template>
@@ -131,5 +131,10 @@
     .el-pagination {
         margin-top: 16px;
         margin-bottom: 16px;
+    }
+
+    .nothing {
+        text-align: center;
+        color: #202020;
     }
 </style>
