@@ -6,12 +6,16 @@
 
 # Build
 
-Install `bindate` first
-```
-go get -u github.com/kataras/bindata/cmd/bindata
-```
+## Requirement
 
-Then
+1. golang
+2. node & yarn
+3. bindata
+    ```
+    go get -u github.com/kataras/bindata/cmd/bindata
+    ```
+
+## Run Build
 
 ```
 ./build.sh
