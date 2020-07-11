@@ -11,6 +11,7 @@
                         suffix-icon="el-icon-search"
                         size="small"
                         v-model="searchText"
+                        :disabled="listLoading"
                         @keyup.native.enter="onSearch">
                 </el-input>
             </el-header>
