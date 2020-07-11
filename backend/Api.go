@@ -36,6 +36,23 @@ func List(ctx iris.Context, ns NMacService) {
 	})
 }
 
+func Search(ctx iris.Context, ns NMacService) {
+	searchText := ctx.URLParamDefault("s", "")
+	page := ctx.URLParamIntDefault("page", 1)
+	data, err := ns.Search(searchText, page)
+	code := 0
+	msg := "ok"
+	if err != nil {
+		code = 1
+		msg = err.Error()
+	}
+	ctx.JSON(iris.Map{
+		"code":    code,
+		"message": msg,
+		"data":    data,
+	})
+}
+
 func Detail(ctx iris.Context, ns NMacService) {
 	u := ctx.URLParamDefault("url", "")
 	if u == "" {

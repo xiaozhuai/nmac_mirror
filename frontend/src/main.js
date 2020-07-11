@@ -13,6 +13,7 @@ import {
     DropdownItem,
     Footer,
     Header,
+    Input,
     Loading,
     Main,
     Menu,
@@ -52,6 +53,7 @@ Vue.use(DropdownMenu);
 Vue.use(DropdownItem);
 Vue.use(Footer);
 Vue.use(Header);
+Vue.use(Input);
 Vue.prototype.$loading = Loading.service;
 Vue.use(Loading.directive);
 Vue.use(Main);

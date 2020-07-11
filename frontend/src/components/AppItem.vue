@@ -1,8 +1,10 @@
 <template>
     <div class="app-item" v-loading="loading">
-        <img class="app-icon" alt=""
-             :src="imageUrl"
-             @click="onShowDetail">
+        <div class="app-icon-container">
+            <img class="app-icon" alt=""
+                 :src="imageUrl"
+                 @click="onShowDetail">
+        </div>
         <div class="app-right">
             <h1 class="app-title" @click="onShowDetail">{{data.title}}</h1>
             <p class="app-description">{{data.description}}</p>
@@ -65,12 +67,21 @@
         margin-bottom: 16px;
     }
 
+    .app-icon-container {
+        width: 100px;
+        height: 100px;
+        display: inline-block;
+        vertical-align: top;
+        overflow: hidden;
+    }
+
     .app-icon {
         width: 100px;
         height: 100px;
         display: inline-block;
         vertical-align: top;
         cursor: pointer;
+        transform: scale(1.05);
     }
 
     .app-icon:hover {
@@ -96,6 +107,7 @@
 
     .app-title:hover {
         opacity: 0.7;
+        text-decoration: underline;
     }
 
     .app-description {

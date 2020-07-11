@@ -4,14 +4,23 @@
             <el-header>
                 <img class="logo" src="./assets/nmac.png" alt="nmac.to">
                 <div class="title">NMac Mirror</div>
+                <el-input
+                        class="search-input"
+                        placeholder="Search..."
+                        clearable
+                        suffix-icon="el-icon-search"
+                        size="small"
+                        v-model="searchText"
+                        @keyup.native.enter="onSearch">
+                </el-input>
             </el-header>
             <el-container>
                 <el-aside>
                     <category-menu @select="onSelectCategory"/>
                 </el-aside>
-                <el-container>
+                <el-container v-loading="listLoading">
                     <el-main>
-                        <app-item-list ref="itemList"/>
+                        <app-item-list ref="itemList" @loading="onLoadingChange"/>
                     </el-main>
                     <el-footer>Copyright (C) 2020 xiaozhuai.</el-footer>
                 </el-container>
@@ -27,13 +36,36 @@
     export default {
         name: 'app',
         components: {AppItemList, CategoryMenu},
+        data() {
+            return {
+                listLoading: true,
+                category: '',
+                searchText: '',
+            }
+        },
+        watch: {
+            searchText(n, o) {
+                if (n.trim() === '' && o.trim() !== '') {
+                    this.$refs.itemList.onClearSearchText();
+                }
+            }
+        },
         methods: {
+            onLoadingChange(loading) {
+                this.listLoading = loading;
+            },
             onSelectCategory(category) {
                 let params = {};
                 if (category !== '') {
                     params.category = category;
                 }
-                this.$refs.itemList.refresh(params)
+                this.$refs.itemList.refresh(params);
+            },
+            onSearch() {
+                let params = {
+                    s: this.searchText
+                };
+                this.$refs.itemList.search(params);
             }
         },
     }
@@ -68,6 +100,12 @@
         color: #eeeeee;
         line-height: 60px;
         margin-left: 24px;
+    }
+
+    .search-input {
+        float: right;
+        width: 280px;
+        margin-top: 14px;
     }
 
     #app > .el-container {

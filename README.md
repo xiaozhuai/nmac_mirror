@@ -22,6 +22,6 @@ Then
 * [x] frontend
 * [x] embed public files
 * [x] embed public gzipped files
-* [ ] search support
+* [x] search support
 * [ ] github action
 * [ ] docker

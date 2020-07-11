@@ -70,6 +70,7 @@ func main() {
 
 	app.Handle("GET", "/api/categories", hero.Handler(Categories))
 	app.Handle("GET", "/api/list", hero.Handler(List))
+	app.Handle("GET", "/api/search", hero.Handler(Search))
 	app.Handle("GET", "/api/detail", hero.Handler(Detail))
 	app.Handle("GET", "/api/direct_url", hero.Handler(DirectUrl))
 	app.Handle("GET", "/api/previous_version", hero.Handler(PreviousVersion))

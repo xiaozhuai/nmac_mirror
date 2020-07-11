@@ -8,6 +8,7 @@
         <el-dropdown-menu slot="dropdown">
             <el-dropdown-item
                     v-for="(link, index) of urls"
+                    :key="index"
                     :index="index"
                     :command="link.url">
                 {{link.title}}
@@ -39,7 +40,6 @@
                 this.downloadLoading = true;
                 try {
                     let res = await this.axios.get("/api/direct_url", {params: {url}});
-                    this.downloadLoading = false;
                     window.open(res.data.data, '_blank').location;
                 } catch (e) {
                 }
@@ -48,6 +48,16 @@
         }
     }
 </script>
+
+<style>
+    .download-button .el-loading-spinner {
+        margin-top: -14px;
+    }
+    .download-button .el-loading-spinner .circular {
+        width: 28px;
+        height: 28px;
+    }
+</style>
 
 <style scoped>
     .download-button {

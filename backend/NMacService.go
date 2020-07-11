@@ -52,6 +52,7 @@ type NMacService interface {
 	UseImageCache() bool
 	GetCategories() ([]*CategoryInfo, error)
 	GetList(category string, page int) (*iris.Map, error)
+	Search(searchText string, page int) (*iris.Map, error)
 	GetDetail(detailPageUrl string) (*ItemDetailInfo, error)
 	GetDirectUrl(u string) (string, error)
 	GetPreviousVersion(previousPageUrl string) []*PreviousVersionInfo
@@ -160,6 +161,46 @@ func (_this *_NMacServiceImpl) parseContent(theContent *goquery.Selection) (html
 	return strings.TrimSpace(firstImg + html), version, size, previousPageUrl, urls
 }
 
+func (_this *_NMacServiceImpl) parseListPage(u string) (iris.Map, error) {
+	r, err := _this.request("GET", u, nil)
+
+	if err != nil {
+		return nil, err
+	}
+	doc, err := goquery.NewDocumentFromReader(r.Body)
+	if err != nil {
+		return nil, err
+	}
+	list := make([]*ItemShortInfo, 0)
+	doc.Find(".main-loop-inner>div").Each(func(i int, selection *goquery.Selection) {
+		if len(selection.Find(".article-image-wrapper").Nodes) > 0 {
+			title := selection.Find(".article-excerpt-wrapper .article-excerpt a").Text()
+			desc := selection.Find(".article-excerpt-wrapper .article-excerpt .excerpt").Text()
+			imgUrl := selection.Find(".article-image-wrapper img").AttrOr("data-src", "")
+			detailPageUrl := selection.Find(".article-image-wrapper a").AttrOr("href", "")
+
+			list = append(list, &ItemShortInfo{
+				Title:         title,
+				Description:   desc,
+				ImageUrl:      imgUrl,
+				DetailPageUrl: detailPageUrl,
+			})
+		}
+	})
+
+	maxPage, err := strconv.ParseInt(strings.TrimSpace(doc.Find(".pagination-inner a").Last().AttrOr("data-paginated", "1")), 10, 32)
+	if err != nil {
+		maxPage = 1
+	}
+
+	return iris.Map{
+		"use_image_cache": _this.UseImageCache(),
+		"max_page":        maxPage,
+		"length":          len(list),
+		"list":            list,
+	}, nil
+}
+
 func (_this *_NMacServiceImpl) UseImageCache() bool {
 	return _this.useImageCache
 }
@@ -220,44 +261,43 @@ func (_this *_NMacServiceImpl) GetList(category string, page int) (*iris.Map, er
 		u += fmt.Sprintf("page/%d/", page)
 	}
 
-	r, err := _this.request("GET", u, nil)
-
+	m, err := _this.parseListPage(u)
 	if err != nil {
 		return nil, err
-	}
-	doc, err := goquery.NewDocumentFromReader(r.Body)
-	if err != nil {
-		return nil, err
-	}
-	list := make([]*ItemShortInfo, 0)
-	doc.Find(".main-loop-inner>div").Each(func(i int, selection *goquery.Selection) {
-		if len(selection.Find(".article-image-wrapper").Nodes) > 0 {
-			title := selection.Find(".article-excerpt-wrapper .article-excerpt a").Text()
-			desc := selection.Find(".article-excerpt-wrapper .article-excerpt .excerpt").Text()
-			imgUrl := selection.Find(".article-image-wrapper img").AttrOr("data-src", "")
-			detailPageUrl := selection.Find(".article-image-wrapper a").AttrOr("href", "")
-
-			list = append(list, &ItemShortInfo{
-				Title:         title,
-				Description:   desc,
-				ImageUrl:      imgUrl,
-				DetailPageUrl: detailPageUrl,
-			})
-		}
-	})
-
-	maxPage, err := strconv.ParseInt(strings.TrimSpace(doc.Find(".pagination-inner a").Last().AttrOr("data-paginated", "1")), 10, 32)
-	if err != nil {
-		maxPage = 1
 	}
 
 	return &iris.Map{
-		"use_image_cache": _this.UseImageCache(),
 		"category":        category,
 		"page":            page,
-		"max_page":        maxPage,
-		"length":          len(list),
-		"list":            list,
+		"use_image_cache": m["use_image_cache"],
+		"max_page":        m["max_page"],
+		"length":          m["length"],
+		"list":            m["list"],
+	}, nil
+}
+
+func (_this *_NMacServiceImpl) Search(searchText string, page int) (*iris.Map, error) {
+	u := "https://nmac.to/"
+	if page > 1 {
+		u += fmt.Sprintf("page/%d/", page)
+	}
+
+	if searchText != "" {
+		u += fmt.Sprintf("?s=%s", url.QueryEscape(searchText))
+	}
+
+	m, err := _this.parseListPage(u)
+	if err != nil {
+		return nil, err
+	}
+
+	return &iris.Map{
+		"searchText":      searchText,
+		"page":            page,
+		"use_image_cache": m["use_image_cache"],
+		"max_page":        m["max_page"],
+		"length":          m["length"],
+		"list":            m["list"],
 	}, nil
 }
 
