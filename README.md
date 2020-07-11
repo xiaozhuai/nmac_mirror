@@ -1,5 +1,8 @@
 # NMac Mirror
+
 [https://nmac.xiaozhuai.net/](https://nmac.xiaozhuai.net/)
+
+**This project is just for research purpose, use it at your own risk.**
 
 # Build
 
@@ -19,5 +22,6 @@ Then
 * [x] frontend
 * [x] embed public files
 * [x] embed public gzipped files
+* [ ] search support
 * [ ] github action
 * [ ] docker
