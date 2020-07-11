@@ -1,9 +1,10 @@
 <template>
     <div class="app-item" v-loading="loading">
         <div class="app-icon-container">
-            <img class="app-icon" alt=""
-                 :src="imageUrl"
-                 @click="onShowDetail">
+            <el-image class="app-icon"
+                      :src="imageUrl"
+                      lazy
+                      @click="onShowDetail"/>
         </div>
         <div class="app-right">
             <h1 class="app-title" @click="onShowDetail">{{data.title}}</h1>
@@ -81,7 +82,7 @@
         display: inline-block;
         vertical-align: top;
         cursor: pointer;
-        transform: scale(1.05);
+        transform: scale(1.02);
     }
 
     .app-icon:hover {
