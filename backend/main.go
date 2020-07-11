@@ -2,10 +2,12 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/hero"
 	"github.com/kataras/iris/v12/middleware/logger"
 	"github.com/kataras/iris/v12/middleware/recover"
+	"strings"
 )
 
 func main() {
@@ -33,6 +35,30 @@ func main() {
 
 	RegisterNMacService(configuration.Proxy, configuration.UserAgent, configuration.UseImageCache)
 
+	// Auto redirect to https
+	app.Use(func(ctx iris.Context) {
+		fmt.Printf("%s\n%s\n", ctx.Request().Host, ctx.Request().RequestURI)
+
+		if configuration.HttpsSupport && configuration.RedirectToHttps && ctx.Request().TLS == nil {
+			host := ctx.Request().Host
+			if pos := strings.Index(host, ":"); pos != -1 {
+				host = host[0:pos]
+			}
+			uri := ctx.Request().RequestURI
+
+			var httpsUrl string
+			if configuration.HttpsPort == 443 {
+				httpsUrl = fmt.Sprintf("https://%s%s", host, uri)
+			} else {
+				httpsUrl = fmt.Sprintf("https://%s:%d%s", host, configuration.HttpsPort, uri)
+			}
+
+			ctx.Redirect(httpsUrl, configuration.RedirectToHttpsCode)
+			return
+		}
+		ctx.Next()
+	})
+
 	app.HandleDir("/", "public", iris.DirOptions{
 		Asset:      GzipAsset,
 		AssetInfo:  GzipAssetInfo,
@@ -51,8 +77,36 @@ func main() {
 	app.Handle("GET", "/api/previous_version", hero.Handler(PreviousVersion))
 	app.Handle("GET", "/api/fetch_image", hero.Handler(FetchImage))
 
-	err := app.Run(iris.Addr(":8080"), iris.WithoutServerError(iris.ErrServerClosed))
-	if err != nil {
-		panic(err)
+	if configuration.HttpsSupport {
+		go func() {
+			err := app.Run(
+				iris.Addr(fmt.Sprintf("%s:%d", configuration.ListenAddress, configuration.HttpPort)),
+				iris.WithoutServerError(iris.ErrServerClosed),
+			)
+			if err != nil {
+				panic(err)
+			}
+		}()
+
+		err := app.Run(
+			iris.TLS(
+				fmt.Sprintf("%s:%d", configuration.ListenAddress, configuration.HttpsPort),
+				configuration.CertFile,
+				configuration.KeyFile,
+			),
+			iris.WithoutServerError(iris.ErrServerClosed),
+		)
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		err := app.Run(
+			iris.Addr(fmt.Sprintf("%s:%d", configuration.ListenAddress, configuration.HttpPort)),
+			iris.WithoutServerError(iris.ErrServerClosed),
+		)
+		if err != nil {
+			panic(err)
+		}
 	}
+
 }

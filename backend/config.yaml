@@ -22,3 +22,27 @@
 
 #cache image dir, default is "./cache/image"
 #cache_image_dir: ./cache/image
+
+#listen address, default is "0.0.0.0"
+#listen_address: 0.0.0.0
+
+#http port, default is 80
+#http_port: 80
+
+#enable https support, default is false
+#https_support: false
+
+#redirect to https, default is true
+#redirect_to_https: true
+
+#redirect to https code, default is 302
+#redirect_to_https_code: 302
+
+#https port, default is 443
+#https_port: 443
+
+#cert file, default is "./cert.cert"
+#cert_file: ./cert.cert
+
+#key file, default is "./cert.key"
+#key_file: ./cert.key
