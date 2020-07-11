@@ -1,0 +1,31 @@
+{
+    "name": "nmac_mirror_frontend",
+    "version": "0.1.0",
+    "private": true,
+    "scripts": {
+        "serve": "vue-cli-service serve",
+        "build": "vue-cli-service build"
+    },
+    "dependencies": {
+        "axios": "^0.19.2",
+        "core-js": "^2.6.5",
+        "element-ui": "^2.13.2",
+        "vue": "^2.6.10",
+        "vue-axios": "^2.1.5"
+    },
+    "devDependencies": {
+        "@vue/cli-plugin-babel": "^3.12.0",
+        "@vue/cli-service": "^3.12.0",
+        "babel-plugin-component": "^1.1.1",
+        "vue-template-compiler": "^2.6.10"
+    },
+    "postcss": {
+        "plugins": {
+            "autoprefixer": {}
+        }
+    },
+    "browserslist": [
+        "> 1%",
+        "last 2 versions"
+    ]
+}

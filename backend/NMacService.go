@@ -4,12 +4,14 @@ import (
 	"crypto/tls"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
+	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/hero"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -41,8 +43,15 @@ type PreviousVersionInfo struct {
 	Urls    []*DownloadUrl `json:"urls"`
 }
 
+type CategoryInfo struct {
+	Title    string `json:"title"`
+	Category string `json:"category"`
+}
+
 type NMacService interface {
-	GetList(category string, page int) ([]*ItemShortInfo, error)
+	UseImageCache() bool
+	GetCategories() ([]*CategoryInfo, error)
+	GetList(category string, page int) (*iris.Map, error)
 	GetDetail(detailPageUrl string) (*ItemDetailInfo, error)
 	GetDirectUrl(u string) (string, error)
 	GetPreviousVersion(previousPageUrl string) []*PreviousVersionInfo
@@ -50,8 +59,9 @@ type NMacService interface {
 }
 
 type _NMacServiceImpl struct {
-	proxy     *url.URL
-	userAgent string
+	proxy         *url.URL
+	userAgent     string
+	useImageCache bool
 }
 
 func (_this *_NMacServiceImpl) request(method string, u string, body io.Reader) (*http.Response, error) {
@@ -131,11 +141,78 @@ func (_this *_NMacServiceImpl) parseContent(theContent *goquery.Selection) (html
 			selection.RemoveAttr("data-sizes")
 		}
 	})
+	var firstImg string
+	theContent.Find("img").Each(func(i int, selection *goquery.Selection) {
+		selection.RemoveAttr("class")
+		selection.RemoveAttr("width")
+		selection.RemoveAttr("height")
+		if _this.UseImageCache() {
+			selection.SetAttr("src", "/api/fetch_image?url="+url.QueryEscape(selection.AttrOr("src", "")))
+		}
+		if i == 0 {
+			selection.SetAttr("class", "detail-icon")
+			firstImg, _ = goquery.OuterHtml(selection)
+			selection.Remove()
+		}
+	})
+
 	html, _ = theContent.Html()
-	return strings.TrimSpace(html), version, size, previousPageUrl, urls
+	return strings.TrimSpace(firstImg + html), version, size, previousPageUrl, urls
 }
 
-func (_this *_NMacServiceImpl) GetList(category string, page int) ([]*ItemShortInfo, error) {
+func (_this *_NMacServiceImpl) UseImageCache() bool {
+	return _this.useImageCache
+}
+
+func (_this *_NMacServiceImpl) GetCategories() ([]*CategoryInfo, error) {
+	u := "https://nmac.to/"
+	r, err := _this.request("GET", u, nil)
+	if err != nil {
+		return nil, err
+	}
+	doc, err := goquery.NewDocumentFromReader(r.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var menu []*CategoryInfo
+
+	doc.Find("#main-menu-full li a").Each(func(i int, selection *goquery.Selection) {
+		href := selection.AttrOr("href", "")
+		title := strings.TrimSpace(selection.Text())
+		category := ""
+		if strings.HasSuffix(href, "/") {
+			href = href[0 : len(href)-1]
+		}
+		if pos := strings.LastIndex(href, "/"); pos != -1 {
+			category = href[pos+1:]
+		}
+		menu = append(menu, &CategoryInfo{
+			Title:    title,
+			Category: category,
+		})
+	})
+
+	doc.Find("#sub-menu-full li a").Each(func(i int, selection *goquery.Selection) {
+		href := selection.AttrOr("href", "")
+		title := strings.TrimSpace(selection.Text())
+		category := ""
+		if strings.HasSuffix(href, "/") {
+			href = href[0 : len(href)-1]
+		}
+		if pos := strings.LastIndex(href, "/"); pos != -1 {
+			category = href[pos+1:]
+		}
+		menu = append(menu, &CategoryInfo{
+			Title:    title,
+			Category: category,
+		})
+	})
+
+	return menu, nil
+}
+
+func (_this *_NMacServiceImpl) GetList(category string, page int) (*iris.Map, error) {
 	u := "https://nmac.to/"
 	if category != "" {
 		u += fmt.Sprintf("category/%s/", category)
@@ -169,7 +246,20 @@ func (_this *_NMacServiceImpl) GetList(category string, page int) ([]*ItemShortI
 			})
 		}
 	})
-	return list, nil
+
+	maxPage, err := strconv.ParseInt(strings.TrimSpace(doc.Find(".pagination-inner a").Last().AttrOr("data-paginated", "1")), 10, 32)
+	if err != nil {
+		maxPage = 1
+	}
+
+	return &iris.Map{
+		"use_image_cache": _this.UseImageCache(),
+		"category":        category,
+		"page":            page,
+		"max_page":        maxPage,
+		"length":          len(list),
+		"list":            list,
+	}, nil
 }
 
 func (_this *_NMacServiceImpl) GetDetail(detailPageUrl string) (*ItemDetailInfo, error) {
@@ -272,7 +362,7 @@ func (_this *_NMacServiceImpl) FetchImage(u string) (contentType string, data []
 	return contentType, data, nil
 }
 
-func RegisterNMacService(proxy string, userAgent string) {
+func RegisterNMacService(proxy string, userAgent string, useImageCache bool) {
 	var service NMacService
 	if proxy != "" {
 		proxyUrl, err := url.Parse(proxy)
@@ -280,8 +370,9 @@ func RegisterNMacService(proxy string, userAgent string) {
 			panic(err)
 		}
 		service = &_NMacServiceImpl{
-			proxy:     proxyUrl,
-			userAgent: userAgent,
+			proxy:         proxyUrl,
+			userAgent:     userAgent,
+			useImageCache: useImageCache,
 		}
 	} else {
 		service = &_NMacServiceImpl{

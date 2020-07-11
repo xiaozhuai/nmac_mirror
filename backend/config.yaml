@@ -11,11 +11,14 @@
 #user agent for requesting "https://nmac.to", default is "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36"
 #user_agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36
 
+#use image cache, default is true
+#use_image_cache: true
+
 #max cache db size, default is 104857600(100MB)
 #max_cache_db_size: 104857600
 
-#cache database dir, default is "cache/db"
-#cache_db_dir: cache/db
+#cache database dir, default is "./cache/db"
+#cache_db_dir: ./cache/db
 
-#cache image dir, default is "cache/image"
-#cache_image_dir: cache/image
+#cache image dir, default is "./cache/image"
+#cache_image_dir: ./cache/image

@@ -4,10 +4,8 @@ import (
 	"github.com/kataras/iris/v12"
 )
 
-func List(ctx iris.Context, ns NMacService) {
-	category := ctx.URLParamDefault("category", "")
-	page := ctx.URLParamIntDefault("page", 1)
-	list, err := ns.GetList(category, page)
+func Categories(ctx iris.Context, ns NMacService) {
+	categories, err := ns.GetCategories()
 	code := 0
 	msg := "ok"
 	if err != nil {
@@ -17,12 +15,24 @@ func List(ctx iris.Context, ns NMacService) {
 	ctx.JSON(iris.Map{
 		"code":    code,
 		"message": msg,
-		"data": iris.Map{
-			"category": category,
-			"page":     page,
-			"size":     len(list),
-			"list":     list,
-		},
+		"data":    categories,
+	})
+}
+
+func List(ctx iris.Context, ns NMacService) {
+	category := ctx.URLParamDefault("category", "")
+	page := ctx.URLParamIntDefault("page", 1)
+	data, err := ns.GetList(category, page)
+	code := 0
+	msg := "ok"
+	if err != nil {
+		code = 1
+		msg = err.Error()
+	}
+	ctx.JSON(iris.Map{
+		"code":    code,
+		"message": msg,
+		"data":    data,
 	})
 }
 
@@ -113,6 +123,15 @@ func FetchImage(ctx iris.Context, ns NMacService, cache CacheService) {
 		ctx.JSON(iris.Map{
 			"code":    1,
 			"message": `Query param "url" cannot be empty!`,
+			"data":    nil,
+		})
+		return
+	}
+
+	if !ns.UseImageCache() {
+		ctx.JSON(iris.Map{
+			"code":    1,
+			"message": `Image cache disabled!`,
 			"data":    nil,
 		})
 		return

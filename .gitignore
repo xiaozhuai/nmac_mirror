@@ -1,7 +1,2 @@
 .idea/
-build/
-public/
 .DS_Store
-
-bindata_gzip.go
-bindata.go

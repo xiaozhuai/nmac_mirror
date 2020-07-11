@@ -1,0 +1,4 @@
+build/
+public/
+bindata_gzip.go
+bindata.go

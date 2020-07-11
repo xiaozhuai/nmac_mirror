@@ -12,6 +12,7 @@ type Configuration struct {
 	LogLevel       string `yaml:"log_level"`
 	Proxy          string `yaml:"proxy"`
 	UserAgent      string `yaml:"user_agent"`
+	UseImageCache  bool   `yaml:"use_image_cache"`
 	MaxCacheDbSize int    `yaml:"max_cache_db_size"`
 	CacheDbDir     string `yaml:"cache_db_dir"`
 	CacheImageDir  string `yaml:"cache_image_dir"`
@@ -28,6 +29,7 @@ func LoadConfig(file string) *Configuration {
 		LogLevel:       "info",
 		Proxy:          "",
 		UserAgent:      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36",
+		UseImageCache:  true,
 		MaxCacheDbSize: 1024 * 1024 * 100, // 100MB
 		CacheDbDir:     "cache/db",
 		CacheImageDir:  "cache/image",
