@@ -175,8 +175,7 @@ func (_this *_NMacServiceImpl) GetCategories() ([]*CategoryInfo, error) {
 		return nil, err
 	}
 
-	var menu []*CategoryInfo
-
+	menu := make([]*CategoryInfo, 0)
 	doc.Find("#main-menu-full li a").Each(func(i int, selection *goquery.Selection) {
 		href := selection.AttrOr("href", "")
 		title := strings.TrimSpace(selection.Text())
@@ -230,7 +229,7 @@ func (_this *_NMacServiceImpl) GetList(category string, page int) (*iris.Map, er
 	if err != nil {
 		return nil, err
 	}
-	var list []*ItemShortInfo
+	list := make([]*ItemShortInfo, 0)
 	doc.Find(".main-loop-inner>div").Each(func(i int, selection *goquery.Selection) {
 		if len(selection.Find(".article-image-wrapper").Nodes) > 0 {
 			title := selection.Find(".article-excerpt-wrapper .article-excerpt a").Text()
@@ -376,8 +375,9 @@ func RegisterNMacService(proxy string, userAgent string, useImageCache bool) {
 		}
 	} else {
 		service = &_NMacServiceImpl{
-			proxy:     nil,
-			userAgent: userAgent,
+			proxy:         nil,
+			userAgent:     userAgent,
+			useImageCache: useImageCache,
 		}
 	}
 	hero.Register(service)

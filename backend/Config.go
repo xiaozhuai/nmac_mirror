@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"gopkg.in/yaml.v3"
 	"io"
 	"io/ioutil"
@@ -51,6 +52,10 @@ func LoadConfig(file string) *Configuration {
 		KeyFile:             "./cert.key",
 	}
 	err = yaml.Unmarshal(data, &configuration)
+
+	out, err := yaml.Marshal(configuration)
+	fmt.Printf("%s\n", string(out))
+
 	if err != nil {
 		panic(err)
 	}

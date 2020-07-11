@@ -37,8 +37,6 @@ func main() {
 
 	// Auto redirect to https
 	app.Use(func(ctx iris.Context) {
-		fmt.Printf("%s\n%s\n", ctx.Request().Host, ctx.Request().RequestURI)
-
 		if configuration.HttpsSupport && configuration.RedirectToHttps && ctx.Request().TLS == nil {
 			host := ctx.Request().Host
 			if pos := strings.Index(host, ":"); pos != -1 {
