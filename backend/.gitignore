@@ -1,4 +1,5 @@
 build/
 public/
+zip/
 bindata_gzip.go
 bindata.go
