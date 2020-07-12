@@ -2,19 +2,19 @@
     <el-dialog :title="detail.title" :visible.sync="showDetailDialog" :destroy-on-close="true">
         <div style="height: 600px; overflow: auto;">
             <div>
-                <div>
+                <div v-if="detail.version">
                     <span class="detail-field">Version: </span>
                     <span class="detail-value">{{detail.version}}</span>
                 </div>
-                <div>
+                <div v-if="detail.size">
                     <span class="detail-field">Size: </span>
                     <span class="detail-value">{{detail.size}}</span>
                 </div>
-                <div>
+                <div v-if="detail.date_published">
                     <span class="detail-field">Posted: </span>
                     <span class="detail-value">{{detail.date_published}}</span>
                 </div>
-                <download-button v-if="detail.urls" :urls="detail.urls"/>
+                <download-button v-if="detail.urls && detail.urls.length > 0" :urls="detail.urls"/>
                 <el-button v-else class="detail-download" type="primary" plain size="small">
                     No Resource!
                 </el-button>

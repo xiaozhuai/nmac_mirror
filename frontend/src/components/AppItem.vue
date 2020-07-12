@@ -9,6 +9,9 @@
         <div class="app-right">
             <h1 class="app-title" @click="onShowDetail">{{data.title}}</h1>
             <p class="app-description">{{data.description}}</p>
+            <div class="app-bottom">
+                <span class="bottom-tag" v-if="data.date_published">Posted {{data.date_published}}</span>
+            </div>
         </div>
     </div>
 </template>
@@ -98,8 +101,8 @@
 
     .app-title {
         padding-left: 12px;
-        margin-top: 4px;
-        margin-bottom: 16px;
+        margin-top: 0;
+        margin-bottom: 12px;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -120,6 +123,25 @@
         text-overflow: ellipsis;
         display: -webkit-box;
         -webkit-box-orient: vertical;
-        -webkit-line-clamp: 3;
+        -webkit-line-clamp: 2;
+    }
+
+    .app-bottom {
+        margin-top: 8px;
+        padding-left: 12px;
+    }
+
+    .bottom-tag {
+        font-size: 12px;
+        vertical-align: top;
+        display: inline-block;
+        padding: 2px 6px;
+        border: 1px solid #dddddd;
+        box-sizing: border-box;
+        border-radius: 6px;
+    }
+
+    .bottom-tag + .bottom-tag {
+        margin-left: 8px;
     }
 </style>

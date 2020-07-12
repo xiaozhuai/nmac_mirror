@@ -19,6 +19,7 @@ type ItemShortInfo struct {
 	Title         string `json:"title"`
 	Description   string `json:"description"`
 	ImageUrl      string `json:"image_url"`
+	DatePublished string `json:"date_published"`
 	DetailPageUrl string `json:"detail_page_url"`
 }
 
@@ -181,11 +182,20 @@ func (_this *_NMacServiceImpl) parseListPage(u string) (iris.Map, error) {
 			desc := selection.Find(".article-excerpt-wrapper .article-excerpt .excerpt").Text()
 			imgUrl := selection.Find(".article-image-wrapper img").AttrOr("data-src", "")
 			detailPageUrl := selection.Find(".article-image-wrapper a").AttrOr("href", "")
+			datePublished := selection.Find(".article-meta .meta-info").Text()
+			dateRegexp := regexp.MustCompile(`\d+-\d+-\d+`)
+			matches := dateRegexp.FindStringSubmatch(datePublished)
+			if len(matches) > 0 {
+				datePublished = matches[0]
+			} else {
+				datePublished = ""
+			}
 
 			list = append(list, &ItemShortInfo{
 				Title:         title,
 				Description:   desc,
 				ImageUrl:      imgUrl,
+				DatePublished: datePublished,
 				DetailPageUrl: detailPageUrl,
 			})
 		}
