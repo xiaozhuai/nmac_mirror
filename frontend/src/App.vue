@@ -52,16 +52,22 @@
             }
         },
         mounted() {
-            let initParams = this.$router.get();
-            if (initParams.isSearchMode) {
-                this.searchText = initParams.params.s;
-                this.$refs.itemList.search(initParams.params);
-            } else {
-                this.category = initParams.params.category;
-                this.$refs.itemList.refresh(initParams.params);
+            this.onHashChange();
+            window.onhashchange = () => {
+                this.onHashChange();
             }
         },
         methods: {
+            onHashChange() {
+                let initParams = this.$router.get();
+                if (initParams.isSearchMode) {
+                    this.searchText = initParams.params.s;
+                    this.$refs.itemList.search(initParams.params);
+                } else {
+                    this.category = initParams.params.category;
+                    this.$refs.itemList.refresh(initParams.params);
+                }
+            },
             onLoadingChange(loading) {
                 this.listLoading = loading;
             },
