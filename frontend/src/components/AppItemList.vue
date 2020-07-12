@@ -1,20 +1,23 @@
 <template>
     <div class="app-item-list">
         <div class="list-container" v-if="list.length > 0">
-            <app-item
-                    v-for="(item, index) of list"
-                    :key="index"
-                    :data="item"
-                    :use-image-cache="use_image_cache"
-                    @show-detail="onShowDetail"/>
-            <el-pagination
-                    background
-                    layout="prev, pager, next, ->, jumper"
-                    :current-page="page"
-                    :page-count="max_page"
-                    @current-change="onPageChange"/>
+            <div class="list-container-inner">
+                <app-item
+                        v-for="(item, index) of list"
+                        :key="index"
+                        :data="item"
+                        :use-image-cache="use_image_cache"
+                        @show-detail="onShowDetail"/>
+            </div>
         </div>
-        <div v-else class="nothing">{{isSearchMode ? 'Nothing Found' : 'Nothing Here'}}</div>
+        <el-pagination
+                v-if="list.length > 0"
+                background
+                layout="prev, pager, next, ->, jumper"
+                :current-page="page"
+                :page-count="max_page"
+                @current-change="onPageChange"/>
+        <div v-if="list.length === 0" class="nothing">{{nothing}}</div>
         <detail-dialog ref="detailDialog"/>
     </div>
 </template>
@@ -29,6 +32,7 @@
         components: {DetailDialog, DownloadButton, AppItem},
         data() {
             return {
+                loading: true,
                 isSearchMode: false,
                 normalResult: {
                     category: '',
@@ -49,6 +53,9 @@
             };
         },
         computed: {
+            nothing() {
+                return this.loading ? '' : (isSearchMode ? 'Nothing Found' : 'Nothing Here');
+            },
             page() {
                 return this.isSearchMode ? this.searchResult.page : this.normalResult.page;
             },
@@ -70,6 +77,7 @@
         },
         methods: {
             setLoading(b) {
+                this.loading = true;
                 this.$emit('loading', b);
             },
             async refresh(params = {}) {
@@ -126,11 +134,23 @@
 <style scoped>
     .list-container {
         width: 100%;
+        max-width: 1200px;
+        margin: auto;
+        height: calc(100% - 48px);
+        overflow: auto;
+    }
+
+    .list-container::-webkit-scrollbar {
+        display: none
+    }
+
+    .list-container-inner {
+        width: 100%;
     }
 
     .el-pagination {
-        margin-top: 16px;
-        margin-bottom: 16px;
+        margin: 16px auto 0;
+        max-width: 1200px;
     }
 
     .nothing {

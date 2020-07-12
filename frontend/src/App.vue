@@ -55,6 +55,7 @@
             onLoadingChange(loading) {
                 this.listLoading = loading;
             },
+            // TODO Router
             onSelectCategory(category) {
                 let params = {};
                 if (category !== '') {
@@ -128,6 +129,7 @@
         box-sizing: border-box;
         line-height: 60px;
         color: #202020;
+        font-size: 13px;
     }
 
     .category-menu {

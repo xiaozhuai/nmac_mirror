@@ -16,6 +16,7 @@ func main() {
 	flag.Parse()
 
 	configuration := LoadConfig(configurationFile)
+	configuration.PrepareDirs()
 
 	app := iris.New()
 
@@ -27,13 +28,14 @@ func main() {
 	app.Use(recover.New())
 	app.Use(logger.New())
 
-	hero.Register(app.Logger())
-
-	configuration.PrepareDirs()
-	cache := RegisterCacheService(configuration.MaxCacheDbSize, configuration.CacheDbDir, configuration.CacheImageDir)
+	cache := NewCacheService(configuration.MaxCacheDbSize, configuration.CacheDbDir, configuration.CacheImageDir)
 	defer cache.Close()
+	ns := NewNMacService(configuration.Proxy, configuration.UserAgent, configuration.UseImageCache)
 
-	RegisterNMacService(configuration.Proxy, configuration.UserAgent, configuration.UseImageCache)
+	hero.Register(configuration)
+	hero.Register(app.Logger())
+	hero.Register(cache)
+	hero.Register(ns)
 
 	// Auto redirect to https
 	app.Use(func(ctx iris.Context) {

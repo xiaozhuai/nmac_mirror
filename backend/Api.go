@@ -64,6 +64,15 @@ func Detail(ctx iris.Context, ns NMacService) {
 		return
 	}
 
+	if !ns.AllowUrl(u) {
+		ctx.JSON(iris.Map{
+			"code":    1,
+			"message": `Query param "url" is not a nmac.to url`,
+			"data":    nil,
+		})
+		return
+	}
+
 	detail, err := ns.GetDetail(u)
 	code := 0
 	msg := "ok"
@@ -89,8 +98,18 @@ func DirectUrl(ctx iris.Context, ns NMacService, cache CacheService) {
 		return
 	}
 
+	if !ns.AllowUrl(u) {
+		ctx.JSON(iris.Map{
+			"code":    1,
+			"message": `Query param "url" is not a nmac.to url`,
+			"data":    nil,
+		})
+		return
+	}
+
 	directUrl, exists := cache.GetDirectUrl(u)
 	if exists {
+		ctx.Header("Mirror-Cache", "hit")
 		ctx.JSON(iris.Map{
 			"code":    0,
 			"message": "ok",
@@ -108,6 +127,8 @@ func DirectUrl(ctx iris.Context, ns NMacService, cache CacheService) {
 		code = 1
 		msg = err.Error()
 	}
+
+	ctx.Header("Mirror-Cache", "miss")
 	ctx.JSON(iris.Map{
 		"code":    code,
 		"message": msg,
@@ -126,6 +147,15 @@ func PreviousVersion(ctx iris.Context, ns NMacService) {
 		return
 	}
 
+	if !ns.AllowUrl(u) {
+		ctx.JSON(iris.Map{
+			"code":    1,
+			"message": `Query param "url" is not a nmac.to url`,
+			"data":    nil,
+		})
+		return
+	}
+
 	versions := ns.GetPreviousVersion(u)
 	ctx.JSON(iris.Map{
 		"code":    0,
@@ -137,25 +167,23 @@ func PreviousVersion(ctx iris.Context, ns NMacService) {
 func FetchImage(ctx iris.Context, ns NMacService, cache CacheService) {
 	u := ctx.URLParamDefault("url", "")
 	if u == "" {
-		ctx.JSON(iris.Map{
-			"code":    1,
-			"message": `Query param "url" cannot be empty!`,
-			"data":    nil,
-		})
+		ctx.StatusCode(404)
+		return
+	}
+
+	if !ns.AllowUrl(u) {
+		ctx.StatusCode(403)
 		return
 	}
 
 	if !ns.UseImageCache() {
-		ctx.JSON(iris.Map{
-			"code":    1,
-			"message": `Image cache disabled!`,
-			"data":    nil,
-		})
+		ctx.StatusCode(403)
 		return
 	}
 
 	contentType, data, exists := cache.GetImageCache(u)
 	if exists {
+		ctx.Header("Mirror-Cache", "hit")
 		ctx.ContentType(contentType)
 		ctx.Write(data)
 		return
@@ -163,16 +191,13 @@ func FetchImage(ctx iris.Context, ns NMacService, cache CacheService) {
 
 	contentType, data, err := ns.FetchImage(u)
 	if err != nil {
-		ctx.JSON(iris.Map{
-			"code":    1,
-			"message": `Fetch image failed!`,
-			"data":    nil,
-		})
+		ctx.StatusCode(404)
 		return
 	}
 
 	cache.SetImageCache(u, contentType, data)
 
+	ctx.Header("Mirror-Cache", "miss")
 	ctx.ContentType(contentType)
 	ctx.Write(data)
 }

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/kataras/iris/v12"
-	"github.com/kataras/iris/v12/hero"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -49,6 +48,7 @@ type CategoryInfo struct {
 }
 
 type NMacService interface {
+	AllowUrl(u string) bool
 	UseImageCache() bool
 	GetCategories() ([]*CategoryInfo, error)
 	GetList(category string, page int) (*iris.Map, error)
@@ -148,7 +148,10 @@ func (_this *_NMacServiceImpl) parseContent(theContent *goquery.Selection) (html
 		selection.RemoveAttr("width")
 		selection.RemoveAttr("height")
 		if _this.UseImageCache() {
-			selection.SetAttr("src", "/api/fetch_image?url="+url.QueryEscape(selection.AttrOr("src", "")))
+			u := selection.AttrOr("src", "")
+			if _this.AllowUrl(u) {
+				selection.SetAttr("src", "/api/fetch_image?url="+url.QueryEscape(u))
+			}
 		}
 		if i == 0 {
 			selection.SetAttr("class", "detail-icon")
@@ -199,6 +202,24 @@ func (_this *_NMacServiceImpl) parseListPage(u string) (iris.Map, error) {
 		"length":          len(list),
 		"list":            list,
 	}, nil
+}
+
+func (_this *_NMacServiceImpl) AllowUrl(u string) bool {
+	uu, err := url.Parse(u)
+	if err != nil {
+		return false
+	}
+
+	host := uu.Host
+	if pos := strings.Index(host, ":"); pos != -1 {
+		host = host[0:pos]
+	}
+
+	if host == "nmac.to" {
+		return true
+	}
+
+	return false
 }
 
 func (_this *_NMacServiceImpl) UseImageCache() bool {
@@ -255,7 +276,11 @@ func (_this *_NMacServiceImpl) GetCategories() ([]*CategoryInfo, error) {
 func (_this *_NMacServiceImpl) GetList(category string, page int) (*iris.Map, error) {
 	u := "https://nmac.to/"
 	if category != "" {
-		u += fmt.Sprintf("category/%s/", category)
+		if category == "tutorial" {
+			u += "tutorial/"
+		} else {
+			u += fmt.Sprintf("category/%s/", category)
+		}
 	}
 	if page > 1 {
 		u += fmt.Sprintf("page/%d/", page)
@@ -401,24 +426,18 @@ func (_this *_NMacServiceImpl) FetchImage(u string) (contentType string, data []
 	return contentType, data, nil
 }
 
-func RegisterNMacService(proxy string, userAgent string, useImageCache bool) {
-	var service NMacService
+func NewNMacService(proxy string, userAgent string, useImageCache bool) NMacService {
+	var proxyUrl *url.URL
+	var err error
 	if proxy != "" {
-		proxyUrl, err := url.Parse(proxy)
+		proxyUrl, err = url.Parse(proxy)
 		if err != nil {
 			panic(err)
 		}
-		service = &_NMacServiceImpl{
-			proxy:         proxyUrl,
-			userAgent:     userAgent,
-			useImageCache: useImageCache,
-		}
-	} else {
-		service = &_NMacServiceImpl{
-			proxy:         nil,
-			userAgent:     userAgent,
-			useImageCache: useImageCache,
-		}
 	}
-	hero.Register(service)
+	return &_NMacServiceImpl{
+		proxy:         proxyUrl,
+		userAgent:     userAgent,
+		useImageCache: useImageCache,
+	}
 }

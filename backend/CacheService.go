@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/kataras/iris/v12/hero"
 	"github.com/prologic/bitcask"
 	"io/ioutil"
 	"math/rand"
@@ -129,7 +128,7 @@ func (_this *_CacheServiceImpl) Close() {
 	}
 }
 
-func RegisterCacheService(maxDataSize int, cacheDbDir string, imageCacheDir string) CacheService {
+func NewCacheService(maxDataSize int, cacheDbDir string, imageCacheDir string) CacheService {
 	db, err := bitcask.Open(
 		cacheDbDir,
 		bitcask.WithMaxKeySize(8192),
@@ -139,12 +138,8 @@ func RegisterCacheService(maxDataSize int, cacheDbDir string, imageCacheDir stri
 		panic(err)
 	}
 
-	cache := &_CacheServiceImpl{
+	return &_CacheServiceImpl{
 		db:            db,
 		imageCacheDir: imageCacheDir,
 	}
-
-	hero.Register(cache)
-
-	return cache
 }

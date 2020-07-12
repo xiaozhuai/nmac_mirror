@@ -1,5 +1,5 @@
 <template>
-    <el-dialog :title="detail.title" :visible.sync="showDetailDialog">
+    <el-dialog :title="detail.title" :visible.sync="showDetailDialog" :destroy-on-close="true">
         <div style="height: 600px; overflow: auto;">
             <div>
                 <div>
