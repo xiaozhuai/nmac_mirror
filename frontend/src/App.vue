@@ -17,7 +17,7 @@
             </el-header>
             <el-container>
                 <el-aside>
-                    <category-menu @select="onSelectCategory"/>
+                    <category-menu @select="onSelectCategory" :category="category"/>
                 </el-aside>
                 <el-container v-loading="listLoading">
                     <el-main>
@@ -51,12 +51,22 @@
                 }
             }
         },
+        mounted() {
+            let initParams = this.$router.get();
+            if (initParams.isSearchMode) {
+                this.searchText = initParams.params.s;
+                this.$refs.itemList.search(initParams.params);
+            } else {
+                this.category = initParams.params.category;
+                this.$refs.itemList.refresh(initParams.params);
+            }
+        },
         methods: {
             onLoadingChange(loading) {
                 this.listLoading = loading;
             },
-            // TODO Router
             onSelectCategory(category) {
+                this.category = category;
                 let params = {};
                 if (category !== '') {
                     params.category = category;
@@ -64,6 +74,9 @@
                 this.$refs.itemList.refresh(params);
             },
             onSearch() {
+                if (this.searchText.trim() === '') {
+                    return;
+                }
                 let params = {
                     s: this.searchText
                 };

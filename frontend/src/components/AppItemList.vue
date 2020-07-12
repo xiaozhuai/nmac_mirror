@@ -17,7 +17,7 @@
                 :current-page="page"
                 :page-count="max_page"
                 @current-change="onPageChange"/>
-        <div v-if="list.length === 0" class="nothing">{{nothing}}</div>
+        <div v-if="nothing" class="nothing">{{isSearchMode ? 'Nothing Found' : 'Nothing Here'}}</div>
         <detail-dialog ref="detailDialog"/>
     </div>
 </template>
@@ -34,6 +34,7 @@
             return {
                 loading: true,
                 isSearchMode: false,
+                nothing: false,
                 normalResult: {
                     category: '',
                     page: 1,
@@ -53,9 +54,6 @@
             };
         },
         computed: {
-            nothing() {
-                return this.loading ? '' : (isSearchMode ? 'Nothing Found' : 'Nothing Here');
-            },
             page() {
                 return this.isSearchMode ? this.searchResult.page : this.normalResult.page;
             },
@@ -72,36 +70,41 @@
                 return this.isSearchMode ? this.searchResult.list : this.normalResult.list;
             },
         },
-        async mounted() {
-            await this.refresh();
-        },
         methods: {
             setLoading(b) {
                 this.loading = true;
                 this.$emit('loading', b);
             },
             async refresh(params = {}) {
+                this.isSearchMode = false;
+                this.$router.update(this.isSearchMode, params)
                 this.setLoading(true);
                 try {
                     let res = await this.axios.get("/api/list", {params});
                     this.normalResult = res.data.data;
-                    this.isSearchMode = false;
+                    this.nothing = this.normalResult.length === 0;
                 } catch (e) {
                 }
                 this.setLoading(false);
             },
             async search(params = {}) {
+                this.isSearchMode = true;
+                this.$router.update(this.isSearchMode, params)
                 this.setLoading(true);
                 try {
                     let res = await this.axios.get("/api/search", {params});
                     this.searchResult = res.data.data;
-                    this.isSearchMode = true;
+                    this.nothing = this.searchResult.length === 0;
                 } catch (e) {
                 }
                 this.setLoading(false);
             },
             onClearSearchText() {
                 this.isSearchMode = false;
+                this.refresh({
+                    category: this.normalResult.category,
+                    page: this.normalResult.page,
+                });
             },
             async onShowDetail(detail) {
                 this.$refs.detailDialog.show(detail);

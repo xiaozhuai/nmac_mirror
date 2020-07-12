@@ -2,6 +2,7 @@ import Vue from 'vue';
 import axios from 'axios';
 import VueAxios from 'vue-axios';
 import App from './App.vue';
+import HashRouter from "./HashRouter";
 
 import {
     Aside,
@@ -71,6 +72,7 @@ Vue.prototype.$notify = Notification;
 Vue.use(Pagination);
 Vue.use(Submenu);
 
+Vue.prototype.$router = new HashRouter();
 
 Vue.config.productionTip = false;
 

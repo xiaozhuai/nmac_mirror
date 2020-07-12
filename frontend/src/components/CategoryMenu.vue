@@ -4,6 +4,7 @@
              background-color="#303030"
              text-color="#fff"
              active-text-color="#ffd04b"
+             :default-active="category"
              @select="onSelect">
         <el-menu-item
                 v-for="(category, index) of categories"
@@ -18,6 +19,12 @@
 <script>
     export default {
         name: "CategoryMenu",
+        props: {
+            category: {
+                type: String,
+                default: '',
+            }
+        },
         data() {
             return {
                 loading: true,
