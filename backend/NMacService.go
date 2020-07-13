@@ -332,12 +332,11 @@ func (_this *_NMacServiceImpl) Search(searchText string, page int) (*iris.Map, e
 	}
 
 	return &iris.Map{
-		"searchText":      searchText,
-		"page":            page,
-		"use_image_cache": _this.UseImageCache(),
-		"max_page":        m["max_page"],
-		"length":          m["length"],
-		"list":            m["list"],
+		"searchText": searchText,
+		"page":       page,
+		"max_page":   m["max_page"],
+		"length":     m["length"],
+		"list":       m["list"],
 	}, nil
 }
 
