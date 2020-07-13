@@ -76,7 +76,7 @@ func main() {
 	app.Handle("GET", "/api/detail", hero.Handler(Detail))
 	app.Handle("GET", "/api/direct_url", hero.Handler(DirectUrl))
 	app.Handle("GET", "/api/previous_version", hero.Handler(PreviousVersion))
-	app.Handle("GET", "/api/fetch_image", hero.Handler(FetchImage))
+	app.Handle("GET", "/image_cache", hero.Handler(ImageCache))
 
 	if configuration.HttpsSupport {
 		go func() {

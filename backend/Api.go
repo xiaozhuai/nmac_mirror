@@ -164,7 +164,7 @@ func PreviousVersion(ctx iris.Context, ns NMacService) {
 	})
 }
 
-func FetchImage(ctx iris.Context, ns NMacService, cache CacheService) {
+func ImageCache(ctx iris.Context, ns NMacService, cache CacheService) {
 	u := ctx.URLParamDefault("url", "")
 	if u == "" {
 		ctx.StatusCode(404)

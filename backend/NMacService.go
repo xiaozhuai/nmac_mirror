@@ -82,6 +82,10 @@ func (_this *_NMacServiceImpl) request(method string, u string, body io.Reader) 
 	return client.Do(req)
 }
 
+func imageCacheUrl(u string) string {
+	return "/image_cache?url=" + url.QueryEscape(u)
+}
+
 func (_this *_NMacServiceImpl) parseContent(theContent *goquery.Selection) (html string, version string, size string, previousPageUrl string, urls []*DownloadUrl) {
 	urls = make([]*DownloadUrl, 0)
 	previousPageUrl = ""
@@ -151,7 +155,7 @@ func (_this *_NMacServiceImpl) parseContent(theContent *goquery.Selection) (html
 		if _this.UseImageCache() {
 			u := selection.AttrOr("src", "")
 			if _this.AllowUrl(u) {
-				selection.SetAttr("src", "/api/fetch_image?url="+url.QueryEscape(u))
+				selection.SetAttr("src", imageCacheUrl(u))
 			}
 		}
 		if i == 0 {
@@ -182,7 +186,7 @@ func (_this *_NMacServiceImpl) parseListPage(u string) (iris.Map, error) {
 			desc := selection.Find(".article-excerpt-wrapper .article-excerpt .excerpt").Text()
 			imgUrl := selection.Find(".article-image-wrapper img").AttrOr("data-src", "")
 			if _this.UseImageCache() && _this.AllowUrl(imgUrl) {
-				imgUrl = "/api/fetch_image?url=" + url.QueryEscape(imgUrl)
+				imgUrl = imageCacheUrl(imgUrl)
 			}
 			detailPageUrl := selection.Find(".article-image-wrapper a").AttrOr("href", "")
 			datePublished := selection.Find(".article-meta .meta-info").Text()
