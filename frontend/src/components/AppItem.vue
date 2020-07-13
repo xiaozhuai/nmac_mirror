@@ -2,7 +2,7 @@
     <div class="app-item" v-loading="loading">
         <div class="app-icon-container">
             <el-image class="app-icon"
-                      :src="imageUrl"
+                      :src="data.image_url"
                       lazy
                       @click="onShowDetail"/>
         </div>
@@ -24,20 +24,11 @@
                 type: Object,
                 required: true,
             },
-            useImageCache: {
-                type: Boolean,
-                default: true,
-            },
         },
         data() {
             return {
                 loading: false,
             };
-        },
-        computed: {
-            imageUrl() {
-                return this.useImageCache ? `/api/fetch_image?url=${encodeURIComponent(this.data.image_url)}` : this.data.image_url;
-            }
         },
         methods: {
             async onShowDetail() {

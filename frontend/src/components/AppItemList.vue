@@ -6,7 +6,6 @@
                         v-for="(item, index) of list"
                         :key="index"
                         :data="item"
-                        :use-image-cache="use_image_cache"
                         @show-detail="onShowDetail"/>
             </div>
         </div>
@@ -38,7 +37,6 @@
                 normalResult: {
                     category: '',
                     page: 1,
-                    use_image_cache: true,
                     max_page: 1,
                     length: 0,
                     list: [],
@@ -46,7 +44,6 @@
                 searchResult: {
                     searchText: '',
                     page: 1,
-                    use_image_cache: true,
                     max_page: 1,
                     length: 0,
                     list: [],
@@ -56,9 +53,6 @@
         computed: {
             page() {
                 return this.isSearchMode ? this.searchResult.page : this.normalResult.page;
-            },
-            use_image_cache() {
-                return this.isSearchMode ? this.searchResult.use_image_cache : this.normalResult.use_image_cache;
             },
             max_page() {
                 return this.isSearchMode ? this.searchResult.max_page : this.normalResult.max_page;

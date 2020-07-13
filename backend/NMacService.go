@@ -181,6 +181,9 @@ func (_this *_NMacServiceImpl) parseListPage(u string) (iris.Map, error) {
 			title := selection.Find(".article-excerpt-wrapper .article-excerpt a").Text()
 			desc := selection.Find(".article-excerpt-wrapper .article-excerpt .excerpt").Text()
 			imgUrl := selection.Find(".article-image-wrapper img").AttrOr("data-src", "")
+			if _this.UseImageCache() && _this.AllowUrl(imgUrl) {
+				imgUrl = "/api/fetch_image?url=" + url.QueryEscape(imgUrl)
+			}
 			detailPageUrl := selection.Find(".article-image-wrapper a").AttrOr("href", "")
 			datePublished := selection.Find(".article-meta .meta-info").Text()
 			dateRegexp := regexp.MustCompile(`\d+-\d+-\d+`)
@@ -301,12 +304,11 @@ func (_this *_NMacServiceImpl) GetList(category string, page int) (*iris.Map, er
 	}
 
 	return &iris.Map{
-		"category":        category,
-		"page":            page,
-		"use_image_cache": _this.UseImageCache(),
-		"max_page":        m["max_page"],
-		"length":          m["length"],
-		"list":            m["list"],
+		"category": category,
+		"page":     page,
+		"max_page": m["max_page"],
+		"length":   m["length"],
+		"list":     m["list"],
 	}, nil
 }
 
