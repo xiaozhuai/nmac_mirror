@@ -1,6 +1,6 @@
 <template>
     <div class="app-item-list">
-        <div class="list-container" v-if="list.length > 0">
+        <div class="list-container" v-if="list.length > 0" ref="listContainer">
             <div class="list-container-inner">
                 <app-item
                         v-for="(item, index) of list"
@@ -77,6 +77,7 @@
                     let res = await this.axios.get("/api/list", {params});
                     this.normalResult = res.data.data;
                     this.nothing = this.normalResult.length === 0;
+                    this.$refs.listContainer.scrollTo(0, 0);
                 } catch (e) {
                 }
                 this.setLoading(false);
@@ -89,6 +90,7 @@
                     let res = await this.axios.get("/api/search", {params});
                     this.searchResult = res.data.data;
                     this.nothing = this.searchResult.length === 0;
+                    this.$refs.listContainer.scrollTo(0, 0);
                 } catch (e) {
                 }
                 this.setLoading(false);
