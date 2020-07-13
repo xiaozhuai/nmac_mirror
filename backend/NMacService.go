@@ -207,10 +207,9 @@ func (_this *_NMacServiceImpl) parseListPage(u string) (iris.Map, error) {
 	}
 
 	return iris.Map{
-		"use_image_cache": _this.UseImageCache(),
-		"max_page":        maxPage,
-		"length":          len(list),
-		"list":            list,
+		"max_page": maxPage,
+		"length":   len(list),
+		"list":     list,
 	}, nil
 }
 
@@ -304,7 +303,7 @@ func (_this *_NMacServiceImpl) GetList(category string, page int) (*iris.Map, er
 	return &iris.Map{
 		"category":        category,
 		"page":            page,
-		"use_image_cache": m["use_image_cache"],
+		"use_image_cache": _this.UseImageCache(),
 		"max_page":        m["max_page"],
 		"length":          m["length"],
 		"list":            m["list"],
@@ -329,7 +328,7 @@ func (_this *_NMacServiceImpl) Search(searchText string, page int) (*iris.Map, e
 	return &iris.Map{
 		"searchText":      searchText,
 		"page":            page,
-		"use_image_cache": m["use_image_cache"],
+		"use_image_cache": _this.UseImageCache(),
 		"max_page":        m["max_page"],
 		"length":          m["length"],
 		"list":            m["list"],
