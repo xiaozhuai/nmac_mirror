@@ -147,6 +147,7 @@
         height: 120px;
         float: left;
         margin-right: 16px;
+        margin-bottom: 16px;
     }
 </style>
 
