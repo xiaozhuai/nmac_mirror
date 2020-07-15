@@ -14,7 +14,7 @@ import (
 type CacheService interface {
 	GetDirectUrl(url string) (directUrl string, exists bool)
 	SetDirectUrl(url string, directUrl string)
-	GetImageCache(url string) (contentType string, imageCachePath string, exists bool)
+	GetImageCache(url string) (contentType string, cachePath string, exists bool)
 	SetImageCache(url string, contentType string, data []byte)
 	Close()
 }
