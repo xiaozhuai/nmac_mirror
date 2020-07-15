@@ -175,11 +175,11 @@ func ImageCache(ctx iris.Context, ns NMacService, cache CacheService) {
 		return
 	}
 
-	contentType, imageCachePath, exists := cache.GetImageCache(u)
+	contentType, cachePath, exists := cache.GetImageCache(u)
 	if exists {
 		ctx.Header("Mirror-Cache", "hit")
 		ctx.ContentType(contentType)
-		ctx.ServeFile(imageCachePath, true)
+		ctx.ServeFile(cachePath, true)
 		return
 	}
 

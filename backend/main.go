@@ -59,6 +59,32 @@ func main() {
 		ctx.Next()
 	})
 
+	assetNames := GzipAssetNames()
+	pushTargets := make([]string, 0)
+	for i := range assetNames {
+		// ignore *.map file
+		if !strings.HasSuffix(assetNames[i], ".map") {
+			pos := strings.Index(assetNames[i], "public/")
+			target := assetNames[i][pos+6:]
+			if target != "/index.html" {
+				pushTargets = append(pushTargets, target)
+			}
+		}
+	}
+
+	// push resources
+	app.Use(func(ctx iris.Context) {
+		if ctx.Request().RequestURI == "/" {
+			for i := range pushTargets {
+				err := ctx.ResponseWriter().Push(pushTargets[i], nil)
+				if err != nil {
+					break
+				}
+			}
+		}
+		ctx.Next()
+	})
+
 	app.HandleDir("/", "public", iris.DirOptions{
 		Asset:      GzipAsset,
 		AssetInfo:  GzipAssetInfo,
