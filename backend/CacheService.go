@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/prologic/bitcask"
 	"io/ioutil"
@@ -11,9 +12,9 @@ import (
 )
 
 type CacheService interface {
-	GetDirectUrl(url string) (string, bool)
+	GetDirectUrl(url string) (directUrl string, exists bool)
 	SetDirectUrl(url string, directUrl string)
-	GetImageCache(url string) (contentType string, data []byte, exists bool)
+	GetImageCache(url string) (contentType string, imageCachePath string, exists bool)
 	SetImageCache(url string, contentType string, data []byte)
 	Close()
 }
@@ -21,6 +22,11 @@ type CacheService interface {
 type _CacheServiceImpl struct {
 	imageCacheDir string
 	db            *bitcask.Bitcask
+}
+
+type ImageCacheInfo struct {
+	File        string `json:"file"`
+	ContentType string `json:"content_type"`
 }
 
 func (_this *_CacheServiceImpl) keyOfDirectUrl(u string) []byte {
@@ -49,9 +55,15 @@ func (_this *_CacheServiceImpl) fileExists(file string) bool {
 	return true
 }
 
-func (_this *_CacheServiceImpl) newImageCacheFile() string {
-	t := time.Now()
-	return fmt.Sprintf("%04d_%02d_%02d__%s", t.Year(), t.Month(), t.Day(), _this.randString(32))
+func (_this *_CacheServiceImpl) newImageCacheFile() (cacheFile string, cachePath string) {
+	for {
+		t := time.Now()
+		cacheFile = fmt.Sprintf("%04d_%02d_%02d__%s", t.Year(), t.Month(), t.Day(), _this.randString(32))
+		cachePath = path.Join(_this.imageCacheDir, cacheFile)
+		if !_this.fileExists(cachePath) {
+			return cacheFile, cachePath
+		}
+	}
 }
 
 func (_this *_CacheServiceImpl) GetDirectUrl(url string) (string, bool) {
@@ -68,58 +80,39 @@ func (_this *_CacheServiceImpl) SetDirectUrl(url string, directUrl string) {
 	_ = _this.db.Put(key, []byte(directUrl))
 }
 
-func (_this *_CacheServiceImpl) GetImageCache(url string) (string, []byte, bool) {
+func (_this *_CacheServiceImpl) GetImageCache(url string) (string, string, bool) {
 	key := _this.keyOfImageCacheFile(url)
 	value, err := _this.db.Get(key)
 	if err != nil {
-		return "", nil, false
+		return "", "", false
 	}
-	file := string(value)
-	imageCachePath := path.Join(_this.imageCacheDir, file)
-	imageCacheContentTypePath := imageCachePath + ".type"
 
-	if !_this.fileExists(imageCachePath) || !_this.fileExists(imageCacheContentTypePath) {
+	var info ImageCacheInfo
+	_ = json.Unmarshal(value, &info)
+
+	cachePath := path.Join(_this.imageCacheDir, info.File)
+	contentType := info.ContentType
+
+	if !_this.fileExists(cachePath) {
 		_ = _this.db.Delete(key)
-		_ = os.Remove(imageCachePath)
-		_ = os.Remove(imageCacheContentTypePath)
-		return "", nil, false
+		_ = os.Remove(cachePath)
+		return "", "", false
 	}
 
-	contentType, err := ioutil.ReadFile(imageCacheContentTypePath)
-	if err != nil {
-		_ = _this.db.Delete(key)
-		_ = os.Remove(imageCachePath)
-		_ = os.Remove(imageCacheContentTypePath)
-		return "", nil, false
-	}
-
-	data, err := ioutil.ReadFile(imageCachePath)
-	if err != nil {
-		_ = _this.db.Delete(key)
-		_ = os.Remove(imageCachePath)
-		_ = os.Remove(imageCacheContentTypePath)
-		return "", nil, false
-	}
-
-	return string(contentType), data, true
+	return contentType, cachePath, true
 }
 
 func (_this *_CacheServiceImpl) SetImageCache(url string, contentType string, data []byte) {
 	key := _this.keyOfImageCacheFile(url)
-	var file string
-	var imageCachePath string
-	var imageCacheContentTypePath string
-	for {
-		file = _this.newImageCacheFile()
-		imageCachePath = path.Join(_this.imageCacheDir, file)
-		imageCacheContentTypePath = imageCachePath + ".type"
-		if !_this.fileExists(imageCachePath) {
-			break
-		}
-	}
-	_ = ioutil.WriteFile(imageCachePath, data, 0644)
-	_ = ioutil.WriteFile(imageCacheContentTypePath, []byte(contentType), 0644)
-	_ = _this.db.Put(key, []byte(file))
+	cacheFile, cachePath := _this.newImageCacheFile()
+
+	info, _ := json.Marshal(ImageCacheInfo{
+		File:        cacheFile,
+		ContentType: contentType,
+	})
+
+	_ = ioutil.WriteFile(cachePath, data, 0644)
+	_ = _this.db.Put(key, info)
 }
 
 func (_this *_CacheServiceImpl) Close() {
