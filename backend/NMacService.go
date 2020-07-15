@@ -51,7 +51,7 @@ type CategoryInfo struct {
 type NMacService interface {
 	AllowUrl(u string) bool
 	UseImageCache() bool
-	GetCategories() ([]*CategoryInfo, error)
+	GetCategories() []*CategoryInfo
 	GetList(category string, page int) (*iris.Map, error)
 	Search(searchText string, page int) (*iris.Map, error)
 	GetDetail(detailPageUrl string) (*ItemDetailInfo, error)
@@ -64,6 +64,7 @@ type _NMacServiceImpl struct {
 	proxy         *url.URL
 	userAgent     string
 	useImageCache bool
+	categories    []*CategoryInfo
 }
 
 func (_this *_NMacServiceImpl) request(method string, u string, body io.Reader) (*http.Response, error) {
@@ -77,9 +78,56 @@ func (_this *_NMacServiceImpl) request(method string, u string, body io.Reader) 
 		Transport: &transport,
 		Timeout:   30 * time.Second,
 	}
-	req, _ := http.NewRequest("GET", u, body)
+	req, _ := http.NewRequest(method, u, body)
 	req.Header.Set("User-Agent", _this.userAgent)
 	return client.Do(req)
+}
+
+func (_this *_NMacServiceImpl) refreshCategories() {
+	u := "https://nmac.to/"
+	r, err := _this.request("GET", u, nil)
+	if err != nil {
+		return
+	}
+	doc, err := goquery.NewDocumentFromReader(r.Body)
+	if err != nil {
+		return
+	}
+
+	menu := make([]*CategoryInfo, 0)
+	doc.Find("#main-menu-full li a").Each(func(i int, selection *goquery.Selection) {
+		href := selection.AttrOr("href", "")
+		title := strings.TrimSpace(selection.Text())
+		category := ""
+		if strings.HasSuffix(href, "/") {
+			href = href[0 : len(href)-1]
+		}
+		if pos := strings.LastIndex(href, "/"); pos != -1 {
+			category = href[pos+1:]
+		}
+		menu = append(menu, &CategoryInfo{
+			Title:    title,
+			Category: category,
+		})
+	})
+
+	doc.Find("#sub-menu-full li a").Each(func(i int, selection *goquery.Selection) {
+		href := selection.AttrOr("href", "")
+		title := strings.TrimSpace(selection.Text())
+		category := ""
+		if strings.HasSuffix(href, "/") {
+			href = href[0 : len(href)-1]
+		}
+		if pos := strings.LastIndex(href, "/"); pos != -1 {
+			category = href[pos+1:]
+		}
+		menu = append(menu, &CategoryInfo{
+			Title:    title,
+			Category: category,
+		})
+	})
+
+	_this.categories = menu
 }
 
 func imageCacheUrl(u string) string {
@@ -242,51 +290,8 @@ func (_this *_NMacServiceImpl) UseImageCache() bool {
 	return _this.useImageCache
 }
 
-func (_this *_NMacServiceImpl) GetCategories() ([]*CategoryInfo, error) {
-	u := "https://nmac.to/"
-	r, err := _this.request("GET", u, nil)
-	if err != nil {
-		return nil, err
-	}
-	doc, err := goquery.NewDocumentFromReader(r.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	menu := make([]*CategoryInfo, 0)
-	doc.Find("#main-menu-full li a").Each(func(i int, selection *goquery.Selection) {
-		href := selection.AttrOr("href", "")
-		title := strings.TrimSpace(selection.Text())
-		category := ""
-		if strings.HasSuffix(href, "/") {
-			href = href[0 : len(href)-1]
-		}
-		if pos := strings.LastIndex(href, "/"); pos != -1 {
-			category = href[pos+1:]
-		}
-		menu = append(menu, &CategoryInfo{
-			Title:    title,
-			Category: category,
-		})
-	})
-
-	doc.Find("#sub-menu-full li a").Each(func(i int, selection *goquery.Selection) {
-		href := selection.AttrOr("href", "")
-		title := strings.TrimSpace(selection.Text())
-		category := ""
-		if strings.HasSuffix(href, "/") {
-			href = href[0 : len(href)-1]
-		}
-		if pos := strings.LastIndex(href, "/"); pos != -1 {
-			category = href[pos+1:]
-		}
-		menu = append(menu, &CategoryInfo{
-			Title:    title,
-			Category: category,
-		})
-	})
-
-	return menu, nil
+func (_this *_NMacServiceImpl) GetCategories() []*CategoryInfo {
+	return _this.categories
 }
 
 func (_this *_NMacServiceImpl) GetList(category string, page int) (*iris.Map, error) {
@@ -449,9 +454,19 @@ func NewNMacService(proxy string, userAgent string, useImageCache bool) NMacServ
 			panic(err)
 		}
 	}
-	return &_NMacServiceImpl{
+	ns := &_NMacServiceImpl{
 		proxy:         proxyUrl,
 		userAgent:     userAgent,
 		useImageCache: useImageCache,
 	}
+
+	refreshCategoriesTicker := time.NewTicker(1 * time.Hour)
+	go func() {
+		for {
+			<-refreshCategoriesTicker.C
+			ns.refreshCategories()
+		}
+	}()
+	ns.refreshCategories()
+	return ns
 }

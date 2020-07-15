@@ -5,16 +5,10 @@ import (
 )
 
 func Categories(ctx iris.Context, ns NMacService) {
-	categories, err := ns.GetCategories()
-	code := 0
-	msg := "ok"
-	if err != nil {
-		code = 1
-		msg = err.Error()
-	}
+	categories := ns.GetCategories()
 	ctx.JSON(iris.Map{
-		"code":    code,
-		"message": msg,
+		"code":    0,
+		"message": "ok",
 		"data":    categories,
 	})
 }
