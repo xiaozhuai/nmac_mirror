@@ -3,8 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/kataras/golog"
 	"github.com/kataras/iris/v12"
-	"github.com/kataras/iris/v12/hero"
+	"github.com/kataras/iris/v12/core/host"
 	"github.com/kataras/iris/v12/middleware/logger"
 	"github.com/kataras/iris/v12/middleware/recover"
 	"strings"
@@ -18,74 +19,63 @@ func main() {
 	configuration := LoadConfig(configurationFile)
 	configuration.PrepareDirs()
 
-	app := iris.New()
-
 	logOutput := configuration.GetLogFile()
 	defer logOutput.Close()
-	app.Logger().SetOutput(logOutput)
-	app.Logger().SetLevel(configuration.LogLevel)
-
-	app.Use(recover.New())
-	app.Use(logger.New())
 
 	cache := NewCacheService(configuration.MaxCacheDbSize, configuration.CacheDbDir, configuration.CacheImageDir)
 	defer cache.Close()
+
 	ns := NewNMacService(configuration.Proxy, configuration.UserAgent, configuration.UseImageCache)
 
-	hero.Register(configuration)
-	hero.Register(app.Logger())
-	hero.Register(cache)
-	hero.Register(ns)
-
-	// Auto redirect to https
-	app.Use(func(ctx iris.Context) {
-		if configuration.HttpsSupport && configuration.RedirectToHttps && ctx.Request().TLS == nil {
-			host := ctx.Request().Host
-			if pos := strings.Index(host, ":"); pos != -1 {
-				host = host[0:pos]
-			}
-			uri := ctx.Request().RequestURI
-
-			var httpsUrl string
-			if configuration.HttpsPort == 443 {
-				httpsUrl = fmt.Sprintf("https://%s%s", host, uri)
-			} else {
-				httpsUrl = fmt.Sprintf("https://%s:%d%s", host, configuration.HttpsPort, uri)
-			}
-
-			ctx.Redirect(httpsUrl, configuration.RedirectToHttpsCode)
-			return
-		}
-		ctx.Next()
-	})
-
-	assetNames := GzipAssetNames()
-	pushTargets := make([]string, 0)
-	for i := range assetNames {
-		// ignore *.map file
-		if !strings.HasSuffix(assetNames[i], ".map") {
-			pos := strings.Index(assetNames[i], "public/")
-			target := assetNames[i][pos+6:]
-			if target != "/index.html" {
-				pushTargets = append(pushTargets, target)
-			}
-		}
+	app := iris.New()
+	app.Logger().SetOutput(logOutput)
+	app.Logger().SetLevel(configuration.LogLevel)
+	app.Use(recover.New())
+	app.Use(logger.New())
+	if configuration.HttpsSupport && configuration.RedirectToHttps {
+		app.Use(AutoRedirectToHttpsMiddleware(configuration.HttpsPort, configuration.RedirectToHttpsCode))
 	}
 
-	// push resources
-	app.Use(func(ctx iris.Context) {
-		if ctx.Request().RequestURI == "/" {
-			for i := range pushTargets {
-				err := ctx.ResponseWriter().Push(pushTargets[i], nil)
-				if err != nil {
-					break
-				}
-			}
-		}
-		ctx.Next()
-	})
+	app.HandleDir("/", "public", AssetsDirOptions())
 
-	app.HandleDir("/", "public", iris.DirOptions{
+	app.Use(iris.CompressReader)
+	app.Use(iris.Compress)
+
+	app.ConfigureContainer(ApiBuilder(configuration, app.Logger(), cache, ns))
+
+	if configuration.HttpsSupport {
+		go app.Run(
+			iris.Addr(fmt.Sprintf("%s:%d", configuration.ListenAddress, configuration.HttpPort)),
+			iris.WithoutServerError(iris.ErrServerClosed),
+		)
+
+		app.Run(
+			iris.TLS(
+				fmt.Sprintf("%s:%d", configuration.ListenAddress, configuration.HttpsPort),
+				configuration.CertFile,
+				configuration.KeyFile,
+				func(su *host.Supervisor) {
+					su.NoRedirect()
+				},
+			),
+			iris.WithoutServerError(iris.ErrServerClosed),
+		)
+	} else {
+		app.Run(
+			iris.Addr(fmt.Sprintf("%s:%d", configuration.ListenAddress, configuration.HttpPort)),
+			iris.WithoutServerError(iris.ErrServerClosed),
+		)
+	}
+}
+
+func AssetsDirOptions() iris.DirOptions {
+	return iris.DirOptions{
+		IndexName: "/index.html",
+		PushTargets: map[string][]string{
+			"/": GetPushTargets(),
+		},
+		Compress:   false,
+		ShowList:   false,
 		Asset:      GzipAsset,
 		AssetInfo:  GzipAssetInfo,
 		AssetNames: GzipAssetNames,
@@ -94,46 +84,62 @@ func main() {
 			ctx.Header("Content-Encoding", "gzip")
 			return true
 		},
-	})
+	}
+}
 
-	app.Handle("GET", "/api/categories", hero.Handler(Categories))
-	app.Handle("GET", "/api/list", hero.Handler(List))
-	app.Handle("GET", "/api/search", hero.Handler(Search))
-	app.Handle("GET", "/api/detail", hero.Handler(Detail))
-	app.Handle("GET", "/api/direct_url", hero.Handler(DirectUrl))
-	app.Handle("GET", "/api/previous_version", hero.Handler(PreviousVersion))
-	app.Handle("GET", "/image_cache", hero.Handler(ImageCache))
-
-	if configuration.HttpsSupport {
-		go func() {
-			err := app.Run(
-				iris.Addr(fmt.Sprintf("%s:%d", configuration.ListenAddress, configuration.HttpPort)),
-				iris.WithoutServerError(iris.ErrServerClosed),
-			)
-			if err != nil {
-				panic(err)
+func AutoRedirectToHttpsMiddleware(httpsPort int, redirectCode int) func(ctx iris.Context) {
+	return func(ctx iris.Context) {
+		if ctx.Request().TLS == nil {
+			h := ctx.Request().Host
+			if pos := strings.Index(h, ":"); pos != -1 {
+				h = h[0:pos]
 			}
-		}()
+			uri := ctx.Request().RequestURI
 
-		err := app.Run(
-			iris.TLS(
-				fmt.Sprintf("%s:%d", configuration.ListenAddress, configuration.HttpsPort),
-				configuration.CertFile,
-				configuration.KeyFile,
-			),
-			iris.WithoutServerError(iris.ErrServerClosed),
-		)
-		if err != nil {
-			panic(err)
+			var httpsUrl string
+			if httpsPort == 443 {
+				httpsUrl = fmt.Sprintf("https://%s%s", h, uri)
+			} else {
+				httpsUrl = fmt.Sprintf("https://%s:%d%s", h, httpsPort, uri)
+			}
+
+			ctx.Redirect(httpsUrl, redirectCode)
+			return
 		}
-	} else {
-		err := app.Run(
-			iris.Addr(fmt.Sprintf("%s:%d", configuration.ListenAddress, configuration.HttpPort)),
-			iris.WithoutServerError(iris.ErrServerClosed),
-		)
-		if err != nil {
-			panic(err)
+		ctx.Next()
+	}
+}
+
+func ApiBuilder(configuration *Configuration, logger *golog.Logger, cache CacheService, ns NMacService) func(api *iris.APIContainer) {
+	return func(api *iris.APIContainer) {
+		api.RegisterDependency(configuration)
+		api.RegisterDependency(logger)
+		api.RegisterDependency(cache)
+		api.RegisterDependency(ns)
+
+		api.Get("/api/categories", Categories)
+		api.Get("/api/list", List)
+		api.Get("/api/search", Search)
+		api.Get("/api/detail", Detail)
+		api.Get("/api/direct_url", DirectUrl)
+		api.Get("/api/previous_version", PreviousVersion)
+		api.Get("/image_cache", ImageCache)
+	}
+}
+
+func GetPushTargets() []string {
+	assetNames := GzipAssetNames()
+	pushTargets := make([]string, 0)
+	for _, name := range assetNames {
+		// ignore *.map file
+		if !strings.HasSuffix(name, ".map") {
+			pos := strings.Index(name, "public/")
+			target := name[pos+6:]
+			// skip /index.html
+			if target != "/index.html" {
+				pushTargets = append(pushTargets, target)
+			}
 		}
 	}
-
+	return pushTargets
 }

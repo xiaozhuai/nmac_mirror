@@ -2,7 +2,7 @@
     <div id="app">
         <el-container>
             <el-header>
-                <img class="logo" src="nmac.png" alt="nmac.to">
+                <img class="logo" src="./assets/nmac.png" alt="nmac.to">
                 <div class="title">NMac Mirror</div>
                 <el-input
                         class="search-input"
