@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/kataras/golog"
 	"github.com/kataras/iris/v12"
-	"github.com/kataras/iris/v12/core/host"
 	"github.com/kataras/iris/v12/middleware/logger"
 	"github.com/kataras/iris/v12/middleware/recover"
 	"strings"
@@ -54,9 +53,7 @@ func main() {
 				fmt.Sprintf("%s:%d", configuration.ListenAddress, configuration.HttpsPort),
 				configuration.CertFile,
 				configuration.KeyFile,
-				func(su *host.Supervisor) {
-					su.NoRedirect()
-				},
+				iris.TLSNoRedirect,
 			),
 			iris.WithoutServerError(iris.ErrServerClosed),
 		)
@@ -80,7 +77,6 @@ func AssetsDirOptions() iris.DirOptions {
 		AssetInfo:  GzipAssetInfo,
 		AssetNames: GzipAssetNames,
 		AssetValidator: func(ctx iris.Context, name string) bool {
-			ctx.Header("Vary", "Accept-Encoding")
 			ctx.Header("Content-Encoding", "gzip")
 			return true
 		},
@@ -132,9 +128,9 @@ func GetPushTargets() []string {
 	pushTargets := make([]string, 0)
 	for _, name := range assetNames {
 		// ignore *.map file
-		if !strings.HasSuffix(name, ".map") {
-			pos := strings.Index(name, "public/")
-			target := name[pos+6:]
+		if !strings.HasSuffix(name, ".map") && !strings.HasSuffix(name, ".ttf") && !strings.HasSuffix(name, ".woff") {
+			target := strings.TrimPrefix(name, "public")
+
 			// skip /index.html
 			if target != "/index.html" {
 				pushTargets = append(pushTargets, target)
