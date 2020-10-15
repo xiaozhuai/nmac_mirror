@@ -10,6 +10,7 @@
                         clearable
                         suffix-icon="el-icon-search"
                         size="small"
+                        autocomplete="on"
                         v-model="searchText"
                         :disabled="listLoading"
                         @keyup.native.enter="onSearch">
