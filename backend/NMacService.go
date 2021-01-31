@@ -84,6 +84,8 @@ func (_this *_NMacServiceImpl) request(method string, u string, body io.Reader) 
 }
 
 func (_this *_NMacServiceImpl) refreshCategories() {
+	ignoredCategories := []string{"apps", "get-vpn-subscription"}
+
 	u := "https://nmac.to/"
 	r, err := _this.request("GET", u, nil)
 	if err != nil {
@@ -94,7 +96,6 @@ func (_this *_NMacServiceImpl) refreshCategories() {
 		return
 	}
 
-	ignoredCategories := []string{"apps", "get-vpn-subscription"}
 	menu := make([]*CategoryInfo, 0)
 	doc.Find("#main-menu-full li a").Each(func(i int, selection *goquery.Selection) {
 		href := selection.AttrOr("href", "")
@@ -133,10 +134,21 @@ func (_this *_NMacServiceImpl) refreshCategories() {
 		if pos := strings.LastIndex(href, "/"); pos != -1 {
 			category = href[pos+1:]
 		}
-		menu = append(menu, &CategoryInfo{
-			Title:    title,
-			Category: category,
-		})
+
+		ignore := false
+		for _, ic := range ignoredCategories {
+			if ic == category {
+				ignore = true
+				break
+			}
+		}
+
+		if !ignore {
+			menu = append(menu, &CategoryInfo{
+				Title:    title,
+				Category: category,
+			})
+		}
 	})
 
 	_this.categories = menu
