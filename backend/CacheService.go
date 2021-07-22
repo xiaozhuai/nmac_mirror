@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/prologic/bitcask"
+	"git.mills.io/prologic/bitcask"
 	"io/ioutil"
 	"math/rand"
 	"os"
